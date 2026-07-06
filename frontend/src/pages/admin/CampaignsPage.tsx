@@ -4,6 +4,7 @@ import { campaignApi } from '@/lib/api';
 import { Plus, Pencil, Zap, ZapOff, Trash2, Calendar, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { parseApiError } from '@/lib/error';
 
 interface Campaign {
   id: string;
@@ -41,13 +42,13 @@ export default function CampaignsPage() {
   const createMutation = useMutation({
     mutationFn: (d: FormState) => campaignApi.create({ ...d, startDate: new Date(d.startDate).toISOString(), endDate: new Date(d.endDate).toISOString() }),
     onSuccess: () => { toast.success('Campaign created'); invalidate(); closeModal(); },
-    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to create campaign'),
+    onError: (e: any) => toast.error(parseApiError(e)),
   });
 
   const updateMutation = useMutation({
     mutationFn: (d: FormState) => campaignApi.update(editing!.id, { ...d, startDate: new Date(d.startDate).toISOString(), endDate: new Date(d.endDate).toISOString() }),
     onSuccess: () => { toast.success('Campaign updated'); invalidate(); closeModal(); },
-    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to update'),
+    onError: (e: any) => toast.error(parseApiError(e)),
   });
 
   const activateMutation = useMutation({
@@ -63,7 +64,7 @@ export default function CampaignsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => campaignApi.delete(id),
     onSuccess: () => { toast.success('Campaign deleted'); invalidate(); },
-    onError: (e: any) => toast.error(e.response?.data?.error || 'Cannot delete this campaign'),
+    onError: (e: any) => toast.error(parseApiError(e)),
   });
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };

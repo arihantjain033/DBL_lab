@@ -8,6 +8,9 @@ import {
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Pagination from '@/components/admin/Pagination';
+import CouponFilterBar from '@/components/admin/CouponFilterBar';
+import { useCouponFilters } from '@/hooks/useCouponFilters';
+import { parseApiError } from '@/lib/error';
 
 interface PrizeRow { prize: string; quantity: number }
 
@@ -24,8 +27,6 @@ const fmtDate = (d?: string | null) =>
 export default function CouponsPage() {
   const qc = useQueryClient();
   const [showGenerator, setShowGenerator] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(() => Number(localStorage.getItem('adminPageSize')) || 50);
 
@@ -42,21 +43,55 @@ export default function CouponsPage() {
     queryFn: () => campaignApi.list(),
   });
   const campaigns: any[] = campaignsRes?.data?.data ?? [];
-  const activeCampaignId = selectedCampaign || campaigns.find((c) => c.active)?.id || '';
+  const activeCampaignId = campaigns.find((c) => c.active)?.id || '';
 
-  const { data: couponsRes, isLoading } = useQuery({
-    queryKey: ['coupons', activeCampaignId, filterStatus, page],
-    queryFn: () =>
-      couponApi.list(activeCampaignId, {
-        limit,
-        page,
-        ...(filterStatus ? { status: filterStatus } : {}),
-      }),
-    enabled: !!activeCampaignId,
+  const { data: rawCoupons = [], isLoading } = useQuery({
+    queryKey: ['all-coupons', campaigns.map(c => c.id)],
+    queryFn: async () => {
+      if (!campaigns.length) return [];
+      const promises = campaigns.map(c => couponApi.list(c.id, { limit: 10000 }));
+      const results = await Promise.all(promises);
+      return results.flatMap(res => res.data?.data?.coupons || []);
+    },
+    enabled: campaigns.length > 0,
   });
-  const coupons: any[] = couponsRes?.data?.data?.coupons ?? [];
-  const totalItems = couponsRes?.data?.data?.total ?? 0;
-  const totalPages = couponsRes?.data?.data?.totalPages ?? 1;
+
+  const { draftFilters, setDraftFilters, applyFilters, resetFilters, filteredAndSorted } = useCouponFilters(rawCoupons);
+
+  const handleApplyFilters = () => {
+    applyFilters();
+    setPage(1); // Reset pagination when new filters are applied
+  };
+
+  const handleResetFilters = () => {
+    resetFilters();
+    setPage(1);
+  };
+
+  // Client-side pagination
+  const totalItems = filteredAndSorted.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const currentCoupons = filteredAndSorted.slice((page - 1) * limit, page * limit);
+
+  const uniquePrizes = Array.from(new Set(rawCoupons.map((c) => c.prize))).filter(Boolean) as string[];
+
+  const handleExport = (format: 'csv' | 'excel') => {
+    if (filteredAndSorted.length === 0) return toast.error('No data to export');
+    
+    let csv = 'Coupon No,Prize,Status,Redeemed,Holder Name,Mobile,City,Issued Date,Expiry Date\n';
+    filteredAndSorted.forEach(c => {
+      csv += `${c.couponNo},"${c.prize}",${c.status},${c.redeemed ? 'Yes' : 'No'},"${c.userName || ''}",${c.userPhone || ''},"${c.userCity || ''}",${fmtDate(c.assignedAt)},${fmtDate(c.expiryDate)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Coupons_Export_${new Date().getTime()}.${format === 'excel' ? 'csv' : 'csv'}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Export downloaded successfully!');
+  };
 
   const generateMutation = useMutation({
     mutationFn: () =>
@@ -73,7 +108,7 @@ export default function CouponsPage() {
       setPrizes([{ prize: '', quantity: 1 }]);
       setExpiryDate('');
     },
-    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to generate coupons'),
+    onError: (e: any) => toast.error(parseApiError(e)),
   });
 
   const addPrizeRow = () => setPrizes((p) => [...p, { prize: '', quantity: 1 }]);
@@ -92,30 +127,7 @@ export default function CouponsPage() {
             Full coupon registry with holder details
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-          {/* Campaign picker */}
-          {campaigns.length > 1 && (
-            <select
-              value={activeCampaignId}
-              onChange={(e) => { setSelectedCampaign(e.target.value); setPage(1); }}
-              className="input-field max-w-[200px] text-sm"
-            >
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          )}
-          {/* Status filter */}
-          <select
-            value={filterStatus}
-            onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-            className="input-field text-sm w-36"
-          >
-            <option value="">All Status</option>
-            <option value="available">Available</option>
-            <option value="assigned">Assigned</option>
-            <option value="redeemed">Redeemed</option>
-          </select>
+        <div className="flex items-center gap-3">
           <button
             id="btn-generate-coupons"
             onClick={() => setShowGenerator(true)}
@@ -126,19 +138,26 @@ export default function CouponsPage() {
         </div>
       </div>
 
+      {campaigns.length > 0 && (
+        <CouponFilterBar
+          filters={draftFilters}
+          setFilters={setDraftFilters}
+          applyFilters={handleApplyFilters}
+          resetFilters={handleResetFilters}
+          campaigns={campaigns}
+          uniquePrizes={uniquePrizes}
+          onExport={handleExport}
+        />
+      )}
+
       {/* Table */}
-      {!activeCampaignId ? (
-        <div className="glass rounded-2xl p-12 text-center">
+      {campaigns.length === 0 ? (
+        <div className="glass rounded-2xl p-12 text-center animate-scale-in">
           <Ticket className="w-10 h-10 text-primary-700 mx-auto mb-3" />
-          <p className="text-white/50 text-sm">Select or create a campaign first</p>
+          <p className="text-white/50 text-sm">Create a campaign first to manage coupons.</p>
         </div>
       ) : isLoading ? (
         <LoadingSpinner />
-      ) : coupons.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center">
-          <Ticket className="w-10 h-10 text-primary-700 mx-auto mb-3" />
-          <p className="text-white/60 text-sm">No coupons found.</p>
-        </div>
       ) : (
         <>
           <div className="glass rounded-2xl overflow-x-auto">
@@ -155,66 +174,79 @@ export default function CouponsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {coupons.map((c: any) => {
-                  const st = STATUS_STYLES[c.status] ?? STATUS_STYLES.available;
-                  const StatusIcon = st.icon;
-                  return (
-                    <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
-                      {/* Coupon No */}
-                      <td className="px-5 py-3 font-mono text-white text-xs font-bold whitespace-nowrap">
-                        {c.couponNo}
-                      </td>
-                      {/* Prize */}
-                      <td className="px-5 py-3 text-white/80 text-xs max-w-[160px]">
-                        <span className="line-clamp-2">{c.prize}</span>
-                      </td>
-                      {/* Status */}
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
-                          <StatusIcon className="w-3 h-3" />
-                          {st.label}
-                        </span>
-                      </td>
-                      {/* Holder Name */}
-                      <td className="px-5 py-3">
-                        {c.userName ? (
-                          <div className="flex items-center gap-1.5">
-                            <User className="w-3 h-3 text-primary-500 flex-shrink-0" />
-                            <span className="text-white text-xs font-medium">{c.userName}</span>
-                          </div>
-                        ) : (
-                          <span className="text-white/20 text-xs">—</span>
-                        )}
-                      </td>
-                      {/* Mobile */}
-                      <td className="px-5 py-3">
-                        {c.userPhone ? (
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-3 h-3 text-primary-500 flex-shrink-0" />
-                            <span className="text-white/80 text-xs font-mono">{c.userPhone}</span>
-                          </div>
-                        ) : (
-                          <span className="text-white/20 text-xs">—</span>
-                        )}
-                      </td>
-                      {/* City */}
-                      <td className="px-5 py-3 hidden lg:table-cell">
-                        {c.userCity ? (
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3 h-3 text-primary-500 flex-shrink-0" />
-                            <span className="text-white/60 text-xs">{c.userCity}</span>
-                          </div>
-                        ) : (
-                          <span className="text-white/20 text-xs">—</span>
-                        )}
-                      </td>
-                      {/* Expiry */}
-                      <td className="px-5 py-3 text-white/40 text-xs hidden lg:table-cell whitespace-nowrap">
-                        {fmtDate(c.expiryDate)}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {currentCoupons.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-16 text-center">
+                      <Ticket className="w-10 h-10 text-primary-700 mx-auto mb-3" />
+                      <h3 className="text-white font-bold mb-1">No matching coupons.</h3>
+                      <p className="text-white/50 text-sm mb-4">Try adjusting your filters or search query.</p>
+                      <button onClick={handleResetFilters} className="btn-secondary min-h-[44px] px-6 mx-auto">
+                        Clear Filters
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  currentCoupons.map((c: any) => {
+                    const st = STATUS_STYLES[c.status] ?? STATUS_STYLES.available;
+                    const StatusIcon = st.icon;
+                    return (
+                      <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
+                        {/* Coupon No */}
+                        <td className="px-5 py-3 font-mono text-white text-xs font-bold whitespace-nowrap">
+                          {c.couponNo}
+                        </td>
+                        {/* Prize */}
+                        <td className="px-5 py-3 text-white/80 text-xs max-w-[160px]">
+                          <span className="line-clamp-2">{c.prize}</span>
+                        </td>
+                        {/* Status */}
+                        <td className="px-5 py-3">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${st.cls}`}>
+                            <StatusIcon className="w-3 h-3" />
+                            {st.label}
+                          </span>
+                        </td>
+                        {/* Holder Name */}
+                        <td className="px-5 py-3">
+                          {c.userName ? (
+                            <div className="flex items-center gap-1.5">
+                              <User className="w-3 h-3 text-primary-500 flex-shrink-0" />
+                              <span className="text-white text-xs font-medium">{c.userName}</span>
+                            </div>
+                          ) : (
+                            <span className="text-white/20 text-xs">—</span>
+                          )}
+                        </td>
+                        {/* Mobile */}
+                        <td className="px-5 py-3">
+                          {c.userPhone ? (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="w-3 h-3 text-primary-500 flex-shrink-0" />
+                              <span className="text-white/80 text-xs font-mono">{c.userPhone}</span>
+                            </div>
+                          ) : (
+                            <span className="text-white/20 text-xs">—</span>
+                          )}
+                        </td>
+                        {/* City */}
+                        <td className="px-5 py-3 hidden lg:table-cell">
+                          {c.userCity ? (
+                            <div className="flex items-center gap-1.5">
+                              <MapPin className="w-3 h-3 text-primary-500 flex-shrink-0" />
+                              <span className="text-white/60 text-xs">{c.userCity}</span>
+                            </div>
+                          ) : (
+                            <span className="text-white/20 text-xs">—</span>
+                          )}
+                        </td>
+                        {/* Expiry */}
+                        <td className="px-5 py-3 text-white/40 text-xs hidden lg:table-cell whitespace-nowrap">
+                          {fmtDate(c.expiryDate)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

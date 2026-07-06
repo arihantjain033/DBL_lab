@@ -5,6 +5,7 @@ import { ScanLine, Search, CheckCircle2, AlertCircle, User, Phone, Trophy, Calen
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import TermsAndConditions from '@/components/ui/TermsAndConditions';
+import { parseApiError } from '@/lib/error';
 
 interface VerifyResult {
   coupon: any;
@@ -22,7 +23,7 @@ export default function VerifyPage() {
     },
     onError: (e: any) => {
       setResult(null);
-      toast.error(e.response?.data?.error || 'Coupon not found');
+      toast.error(parseApiError(e));
     },
   });
 
@@ -32,7 +33,7 @@ export default function VerifyPage() {
       toast.success('Coupon redeemed successfully!');
       setResult((prev) => prev ? { ...prev, coupon: res.data.data } : null);
     },
-    onError: (e: any) => toast.error(e.response?.data?.error || 'Failed to redeem'),
+    onError: (e: any) => toast.error(parseApiError(e)),
   });
 
   const handleVerify = (e: React.FormEvent) => {

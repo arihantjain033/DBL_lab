@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { parseApiError } from '@/lib/error';
 
 interface Setting {
   key: string;
@@ -39,10 +40,10 @@ export default function SettingsPage() {
     mutationFn: ({ key, value }: { key: string; value: string }) =>
       api.patch(`/settings/${key}`, { value }),
     onSuccess: () => {
-      toast.success('Settings saved');
+      toast.success('Settings saved successfully.');
       qc.invalidateQueries({ queryKey: ['settings'] });
     },
-    onError: () => toast.error('Failed to save setting'),
+    onError: (err: any) => toast.error(parseApiError(err)),
   });
 
   const isBoolSetting = (key: string) =>

@@ -13,7 +13,6 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { jsPDF } from 'jspdf';
 import TermsAndConditions from '@/components/ui/TermsAndConditions';
-import { getPrizeTerms } from '@/lib/terms';
 
 const SCRATCH_THRESHOLD = 35; // Configurable threshold (e.g. 35%)
 
@@ -45,133 +44,222 @@ interface ReceiptData {
 function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const MARGIN = 20;
+  const FOOTER_RESERVE = 22; // space kept at the bottom for the footer
 
-  // Header background
-  doc.setFillColor(4, 120, 87); // emerald-700
-  doc.rect(0, 0, W, 52, 'F');
+  /** Advance currentY and add a new page if we would overflow. */
+  const ensureSpace = (cy: number, needed: number): number => {
+    if (cy + needed > H - FOOTER_RESERVE) {
+      doc.addPage();
+      return 16; // top margin on new page
+    }
+    return cy;
+  };
 
-  // Lab name
+  // ----------------------------------------
+  // 1. Header (Emerald Green)
+  // ----------------------------------------
+  doc.setFillColor(4, 120, 87);
+  doc.rect(0, 0, W, 48, 'F');
+
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
+  doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text('DBL Pathology Lab', W / 2, 20, { align: 'center' });
+  doc.text('DBL Pathology Lab', W / 2, 22, { align: 'center' });
 
-  // Tagline
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Premium Diagnostic Services', W / 2, 28, { align: 'center' });
+  doc.text('Premium Diagnostic Services', W / 2, 30, { align: 'center' });
 
-  // Gold divider
   doc.setDrawColor(245, 158, 11);
   doc.setLineWidth(0.8);
-  doc.line(15, 33, W - 15, 33);
+  doc.line(MARGIN, 38, W - MARGIN, 38);
 
-  // Prize badge
-  doc.setFontSize(12);
+  // ----------------------------------------
+  // 2. Title & Prize Box
+  // ----------------------------------------
+  let cy = 58;
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('🎁  SCRATCH CARD REWARD RECEIPT', W / 2, 44, { align: 'center' });
+  doc.text('SCRATCH CARD REWARD RECEIPT', W / 2, cy, { align: 'center' });
 
-  // Prize name box
-  doc.setFillColor(254, 243, 199); // amber-100
+  cy += 10;
+  const freePrizes = [
+    'Free Full Body Health Check-up',
+    'Digital Thermometer',
+    'Free Blood Sugar Test',
+  ];
+  const isDiscount = !freePrizes.includes(receipt.prize);
+  const prizeBoxH = isDiscount ? 32 : 22;
+
+  cy = ensureSpace(cy, prizeBoxH + 4);
+  doc.setFillColor(254, 243, 199);
   doc.setDrawColor(245, 158, 11);
   doc.setLineWidth(0.5);
-  doc.roundedRect(15, 58, W - 30, 22, 3, 3, 'FD');
-  doc.setTextColor(120, 53, 15); // amber-900
+  doc.roundedRect(MARGIN, cy, W - MARGIN * 2, prizeBoxH, 3, 3, 'FD');
+
+  doc.setTextColor(146, 64, 14);
   doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
-  doc.text(receipt.prize, W / 2, 71, { align: 'center', maxWidth: W - 40 });
+  doc.text(receipt.prize, W / 2, cy + 14, { align: 'center', maxWidth: W - 50 });
 
-  // Coupon number
-  doc.setFillColor(236, 253, 245); // green-50
-  doc.setDrawColor(16, 185, 129);
-  doc.roundedRect(15, 86, W - 30, 14, 2, 2, 'FD');
-  doc.setTextColor(4, 120, 87);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Coupon: ${receipt.couponNo}`, W / 2, 95, { align: 'center' });
-
-  // Section: Holder Details
-  let y = 108;
-  doc.setTextColor(55, 65, 81); // gray-700
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('HOLDER DETAILS', 15, y);
-  doc.setDrawColor(229, 231, 235);
-  doc.setLineWidth(0.3);
-  doc.line(15, y + 2, W - 15, y + 2);
-
-  const rows: [string, string][] = [
-    ['Name',         receipt.holderName],
-    ['Mobile',       receipt.holderPhone],
-    ['City',         receipt.holderCity || '—'],
-    ['Scratched On', receipt.scratchedOn],
-    ['Valid Until',  receipt.expiryDate],
-    ['Campaign',     receipt.campaignName],
-  ];
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  rows.forEach(([label, value], i) => {
-    const rowY = y + 10 + i * 9;
-    doc.setTextColor(107, 114, 128); // gray-500
-    doc.text(label, 18, rowY);
-    doc.setTextColor(17, 24, 39);    // gray-900
-    doc.setFont('helvetica', 'bold');
-    doc.text(value, 70, rowY);
-    doc.setFont('helvetica', 'normal');
-  });
-
-  // QR code
-  if (qrDataUrl) {
-    const qrSize = 44;
-    doc.addImage(qrDataUrl, 'PNG', W - 15 - qrSize, y + 8, qrSize, qrSize);
-    doc.setTextColor(156, 163, 175);
-    doc.setFontSize(7);
-    doc.text('Scan to verify', W - 15 - qrSize / 2, y + 8 + qrSize + 4, { align: 'center' });
+  if (isDiscount) {
+    doc.setFontSize(10.5);
+    doc.setTextColor(180, 83, 9);
+    doc.text('Valid on a minimum billing amount of Rs. 200.', W / 2, cy + 25, { align: 'center' });
   }
 
-  // Redemption instructions
-  y = y + 10 + rows.length * 9 + 10;
-  doc.setFillColor(240, 253, 244);
+  cy += prizeBoxH + 8;
+
+  // ----------------------------------------
+  // 3. Coupon Number
+  // ----------------------------------------
+  cy = ensureSpace(cy, 18);
+  doc.setFillColor(236, 253, 245);
   doc.setDrawColor(16, 185, 129);
-  doc.setLineWidth(0.4);
-  const terms = getPrizeTerms(receipt.prize);
-  const boxHeight = 12 + terms.length * 6 + 4;
-  
-  doc.roundedRect(15, y, W - 30, boxHeight, 2, 2, 'FD');
+  doc.roundedRect(MARGIN, cy, W - MARGIN * 2, 16, 2, 2, 'FD');
+
   doc.setTextColor(4, 120, 87);
-  doc.setFontSize(9);
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
-  doc.text('TERMS & CONDITIONS', 20, y + 8);
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(55, 65, 81);
-  terms.forEach((term, i) => {
-    if (term.isSpecial) {
-      doc.setTextColor(217, 119, 6); // amber-600
-      doc.setFont('helvetica', 'bold');
-      doc.text(`* ${term.text}`, 20, y + 15 + i * 6);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(55, 65, 81);
-    } else {
-      doc.text(`• ${term.text}`, 20, y + 15 + i * 6);
-    }
+  doc.text(`Coupon Number: ${receipt.couponNo}`, W / 2, cy + 10.5, { align: 'center' });
+
+  cy += 24;
+
+  // ----------------------------------------
+  // 4. Holder Details (left column) + QR (right)
+  // ----------------------------------------
+  const rows: [string, string][] = [
+    ['Patient Name',   receipt.holderName],
+    ['Mobile Number',  receipt.holderPhone],
+    ['City',           receipt.holderCity || '—'],
+    ['Issue Date',     receipt.scratchedOn],
+    ['Expiry Date',    receipt.expiryDate],
+  ];
+  const holderBlockH = 10 + rows.length * 9 + 6;
+  cy = ensureSpace(cy, holderBlockH + 10);
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('HOLDER DETAILS', MARGIN, cy);
+
+  doc.setDrawColor(229, 231, 235);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, cy + 4, W - MARGIN, cy + 4);
+
+  const detailsStartY = cy;
+  doc.setFontSize(10.5);
+  rows.forEach(([label, value], i) => {
+    const rowY = cy + 13 + i * 9;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(107, 114, 128);
+    doc.text(label, MARGIN + 2, rowY);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(17, 24, 39);
+    doc.text(value, 65, rowY);
   });
 
-  // Footer
-  const footerY = doc.internal.pageSize.getHeight() - 12;
+  if (qrDataUrl) {
+    const qrSize = 44;
+    const qrX = W - MARGIN - qrSize;
+    doc.addImage(qrDataUrl, 'PNG', qrX, detailsStartY + 6, qrSize, qrSize);
+    doc.setFontSize(7);
+    doc.setTextColor(156, 163, 175);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Scan to verify', qrX + qrSize / 2, detailsStartY + 6 + qrSize + 4, { align: 'center' });
+  }
+
+  cy += holderBlockH + 10;
+
+  // ----------------------------------------
+  // 5. How To Redeem
+  // ----------------------------------------
+  const instructions = [
+    '1. Visit DBL Pathology Lab before the expiry date.',
+    '2. Show this receipt or QR code to the reception staff.',
+    '3. Provide your registered mobile number for verification.',
+    '4. This coupon is valid for ONE use only and is non-transferable.',
+  ];
+  const redeemBlockH = 12 + instructions.length * 8 + 6;
+  cy = ensureSpace(cy, redeemBlockH + 10);
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('HOW TO REDEEM', MARGIN, cy);
+
   doc.setDrawColor(229, 231, 235);
-  doc.line(15, footerY - 4, W - 15, footerY - 4);
-  doc.setTextColor(156, 163, 175);
-  doc.setFontSize(7);
-  doc.text(
-    `DBL Pathology Lab  •  ${receipt.verifyUrl}  •  Generated: ${receipt.scratchedOn}`,
-    W / 2, footerY,
-    { align: 'center' },
-  );
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, cy + 4, W - MARGIN, cy + 4);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(55, 65, 81);
+  instructions.forEach((inst, i) => {
+    doc.text(inst, MARGIN + 2, cy + 13 + i * 8);
+  });
+
+  cy += redeemBlockH + 10;
+
+  // ----------------------------------------
+  // 6. Terms & Conditions
+  // ----------------------------------------
+  const terms = [
+    'Valid for 6 Months',
+    'One Scratch Card per Patient',
+    'Non-transferable',
+    'Cannot be exchanged for cash',
+    'Prize must be claimed before expiry',
+    'Management reserves all rights',
+  ];
+  const termsBoxH = 14 + terms.length * 8 + 6;
+  cy = ensureSpace(cy, termsBoxH + 10);
+
+  doc.setFillColor(249, 250, 251);
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(MARGIN, cy, W - MARGIN * 2, termsBoxH, 2, 2, 'FD');
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TERMS & CONDITIONS', MARGIN + 6, cy + 10);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(75, 85, 99);
+  terms.forEach((term, i) => {
+    doc.text(`• ${term}`, MARGIN + 6, cy + 19 + i * 8);
+  });
+
+  cy += termsBoxH + 14;
+
+  // ----------------------------------------
+  // 7. Footer — always below all content
+  // ----------------------------------------
+  const footerY = Math.max(cy + 8, H - 18);
+  // If footer would exceed page, add a new page
+  if (footerY > H - 10) {
+    doc.addPage();
+    cy = 20;
+  }
+  const actualFooterY = footerY > H - 10 ? 30 : footerY;
+
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, actualFooterY - 6, W - MARGIN, actualFooterY - 6);
+
+  doc.setTextColor(107, 114, 128);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'italic');
+  doc.text('Every Test, A Story Of Health', W / 2, actualFooterY + 2, { align: 'center' });
 
   doc.save(`DBL-Coupon-${receipt.couponNo}.pdf`);
 }
+
 
 // ────────────────────────────────────────────────────────────
 // ScratchPage component
@@ -187,9 +275,10 @@ export default function ScratchPage() {
   const [prizeRevealed, setPrizeRevealed] = useState(false);
 
   // ── Coupon data ──
-  const [coupon, setCoupon] = useState<ScratchResult | null>(
-    state?.alreadyScratch && state?.coupon ? state.coupon : null,
-  );
+  // IMPORTANT: coupon is only initialised from state on a live forward-navigation.
+  // On any re-visit (refresh / back / reopen), the sessionStorage token will be
+  // absent and the user is redirected away before they can see the result.
+  const [coupon, setCoupon] = useState<ScratchResult | null>(null);
 
   // ── QR canvas ref (for PDF export) ──
   const qrRef = useRef<HTMLDivElement>(null);
@@ -205,18 +294,28 @@ export default function ScratchPage() {
     return () => window.removeEventListener('resize', h);
   }, []);
 
-  // Redirect if no user state
-  useEffect(() => {
-    if (!state?.user) navigate('/', { replace: true });
-  }, [state, navigate]);
+  // ── Session guard (Bug 2) ──
+  // A one-time token is written into sessionStorage when the user lands here
+  // legitimately after registration. On any re-visit the token is missing
+  // (sessionStorage is not restored on page reload) so we redirect.
+  const SESSION_TOKEN_KEY = 'dbl_scratch_session';
 
-  // Already scratched → skip to reveal
   useEffect(() => {
-    if (state?.alreadyScratch && state?.coupon) {
-      console.log('[ScratchPage Debug] User already scratched before, revealing immediately.');
-      setPrizeRevealed(true);
+    // If there is no navigation state at all → definitely not a valid entry
+    if (!state?.user) {
+      navigate('/', { replace: true });
+      return;
     }
-  }, [state]);
+
+    const existingToken = sessionStorage.getItem(SESSION_TOKEN_KEY);
+
+    if (!existingToken) {
+      // Fresh landing — write a unique token and allow the page to render
+      sessionStorage.setItem(SESSION_TOKEN_KEY, `${Date.now()}-${Math.random()}`);
+    }
+    // (If token already exists this is simply the same tab still open — that is fine)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── API mutation ──
   const scratchMutation = useMutation({

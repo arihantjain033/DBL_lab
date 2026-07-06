@@ -1,4 +1,8 @@
-# OS generated files
+######################################
+# DBL Scratch Card — Root .gitignore
+######################################
+
+# ── OS generated files ──────────────
 .DS_Store
 .DS_Store?
 ._*
@@ -6,30 +10,83 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Environment variables
+# ── Environment variables ────────────
 .env
 .env.*
 !.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# IDE / Editor
+# ── IDE / Editor ─────────────────────
 .idea/
 .vscode/
 *.swp
 *.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.classpath
+.c9/
+*.launch
+.settings/
 
-# Node
+# ── Node / npm / yarn / pnpm ─────────
 node_modules/
-npm-debug.log
-yarn-error.log
-yarn-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
+.npm
+.yarn-integrity
+.pnp.*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
 
-# Build output
+# ── Build output ─────────────────────
 dist/
+dist-ssr/
 build/
-coverage/
+out/
+.output/
 
-# Miscellaneous
-.eslintcache
+# ── Test / Coverage ──────────────────
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+e2e-results/
+
+# ── TypeScript ───────────────────────
 *.tsbuildinfo
+
+# ── Vite ─────────────────────────────
+.vite/
+
+# ── Drizzle / DB ─────────────────────
+drizzle/
+*.sqlite
+*.sqlite3
+
+# ── Logs ─────────────────────────────
+logs/
+*.log
+
+# ── Misc ─────────────────────────────
+.eslintcache
+.cache/
+*.tmp
+*.bak
+*.orig
+.vercel
+.netlify
