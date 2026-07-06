@@ -44,27 +44,32 @@ export const PRIZE_DISTRIBUTION: PrizeTier[] = [
   },
   {
     prize: 'Digital Thermometer',
-    quantity: 20,
+    quantity: 10,
   },
   {
     prize: '50% OFF on Any Blood Test',
     quantity: 20,
-    condition: 'Valid on Minimum Billing of ₹200',
+    condition: 'Valid only on minimum billing of ₹200.',
   },
   {
-    prize: '₹100 Discount Voucher',
-    quantity: 10,
-    condition: 'Valid on Minimum Billing of ₹200',
-  },
-  {
-    prize: '₹200 Discount Voucher',
+    prize: '10% Discount Voucher',
     quantity: 20,
-    condition: 'Valid on Minimum Billing of ₹200',
+    condition: 'Valid only on minimum billing of ₹200.',
   },
   {
-    prize: '₹300 Discount Voucher',
-    quantity: 10,
-    condition: 'Valid on Minimum Billing of ₹200',
+    prize: '20% Discount Voucher',
+    quantity: 20,
+    condition: 'Valid only on minimum billing of ₹200.',
+  },
+  {
+    prize: '30% Discount Voucher',
+    quantity: 20,
+    condition: 'Valid only on minimum billing of ₹200.',
+  },
+  {
+    prize: '40% Discount Voucher',
+    quantity: 20,
+    condition: 'Valid only on minimum billing of ₹200.',
   },
   {
     prize: 'Free Blood Sugar Test',
@@ -72,8 +77,8 @@ export const PRIZE_DISTRIBUTION: PrizeTier[] = [
   },
 ];
 
-// Verify at module load that distribution sums to exactly 101
-const EXPECTED_TOTAL = 101;
+// Verify at module load that distribution sums to exactly 131
+const EXPECTED_TOTAL = 131;
 const ACTUAL_TOTAL = PRIZE_DISTRIBUTION.reduce((sum, t) => sum + t.quantity, 0);
 if (ACTUAL_TOTAL !== EXPECTED_TOTAL) {
   throw new Error(
