@@ -6,6 +6,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 // Lazy-loaded pages
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const ScratchPage = lazy(() => import('@/pages/ScratchPage'));
+const SessionExpiredPage = lazy(() => import('@/pages/SessionExpiredPage'));
 const AdminLoginPage = lazy(() => import('@/pages/admin/AdminLoginPage'));
 const AdminLayout = lazy(() => import('@/components/admin/AdminLayout'));
 const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage'));
@@ -29,6 +30,7 @@ export default function App() {
         {/* User-facing routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/scratch" element={<ScratchPage />} />
+        <Route path="/session-expired" element={<SessionExpiredPage />} />
 
         {/* Admin routes */}
         <Route path="/admin/login" element={<AdminLoginPage />} />

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Phone, User, MapPin, Mail, Sparkles, FlaskConical } from 'lucide-react';
 import { campaignApi, userApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { markRegistered, markScratchReady, isCompleted } from '@/lib/scratchSession';
 
 interface FormData {
   name: string;
@@ -17,6 +18,15 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState<FormData>({ name: '', phone: '', email: '', city: '' });
 
+  // ── Session guard: if this session is already COMPLETED, redirect ──
+  useEffect(() => {
+    // We check by phone if form has one, otherwise just check generic state
+    if (isCompleted()) {
+      navigate('/session-expired', { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Fetch active campaign
   const { data: campaignRes, isLoading: loadingCampaign } = useQuery({
     queryKey: ['active-campaign'],
@@ -28,12 +38,17 @@ export default function LandingPage() {
     mutationFn: (data: FormData & { campaignId: string }) => userApi.register(data),
     onSuccess: (res) => {
       const { user, alreadyRegistered, coupon } = res.data.data;
+
       if (alreadyRegistered && coupon) {
-        // Already scratched — go directly to prize display
-        navigate('/scratch', { state: { user, coupon, campaign, alreadyScratch: true } });
-      } else {
-        navigate('/scratch', { state: { user, campaign } });
+        // Phone already used → session is effectively COMPLETED, block reuse
+        navigate('/session-expired', { replace: true });
+        return;
       }
+
+      // Mark session as registered then scratch-ready
+      markRegistered();
+      markScratchReady();
+      navigate('/scratch', { replace: true, state: { user, campaign } });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || 'Registration failed. Please try again.');

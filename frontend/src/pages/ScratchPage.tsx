@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import ReactConfetti from 'react-confetti';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  Trophy, Gift, Calendar, Hash, ArrowLeft,
+  Trophy, Gift, Calendar, Hash,
   Download, Sparkles, User, Phone, MapPin,
 } from 'lucide-react';
 import ScratchCard from '@/components/ScratchCard';
@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { jsPDF } from 'jspdf';
 import TermsAndConditions from '@/components/ui/TermsAndConditions';
+import { isAtLeastScratchReady, markCompleted } from '@/lib/scratchSession';
 
 const SCRATCH_THRESHOLD = 35; // Configurable threshold (e.g. 35%)
 
@@ -294,26 +295,13 @@ export default function ScratchPage() {
     return () => window.removeEventListener('resize', h);
   }, []);
 
-  // ── Session guard (Bug 2) ──
-  // A one-time token is written into sessionStorage when the user lands here
-  // legitimately after registration. On any re-visit the token is missing
-  // (sessionStorage is not restored on page reload) so we redirect.
-  const SESSION_TOKEN_KEY = 'dbl_scratch_session';
-
+  // ── Session guard ──
+  // Only users who arrived via the registration flow (SCRATCH_READY state) may
+  // see this page. Any direct URL access, refresh, or back-navigation is blocked.
   useEffect(() => {
-    // If there is no navigation state at all → definitely not a valid entry
-    if (!state?.user) {
-      navigate('/', { replace: true });
-      return;
+    if (!state?.user || !isAtLeastScratchReady()) {
+      navigate('/session-expired', { replace: true });
     }
-
-    const existingToken = sessionStorage.getItem(SESSION_TOKEN_KEY);
-
-    if (!existingToken) {
-      // Fresh landing — write a unique token and allow the page to render
-      sessionStorage.setItem(SESSION_TOKEN_KEY, `${Date.now()}-${Math.random()}`);
-    }
-    // (If token already exists this is simply the same tab still open — that is fine)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -357,12 +345,14 @@ export default function ScratchPage() {
   /**
    * Called when canvas crosses threshold.
    * Exclusively responsible for revealing the prize.
+   * Also marks the session as COMPLETED so it cannot be reused.
    */
   const handleScratchComplete = useCallback(() => {
-    console.log('[ScratchPage Debug] handleScratchComplete() triggered by ScratchCard.onComplete()');
     setScratchPercent(100);
     setPrizeRevealed(true);
-  }, []);
+    // Terminal state — session is now locked permanently
+    markCompleted(state?.user?.phone);
+  }, [state?.user?.phone]);
 
   // ── PDF download ──
   const handleDownloadPDF = useCallback(() => {
@@ -462,14 +452,6 @@ export default function ScratchPage() {
       </div>
 
       <div className="relative z-10 min-h-dvh flex flex-col items-center justify-center px-4 py-12">
-        {/* Back button */}
-        <button
-          onClick={() => navigate('/')}
-          className="absolute top-6 left-6 flex items-center gap-1.5 text-primary-400 hover:text-white transition-colors text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
 
         {/* ══════════════════ SCRATCH VIEW ══════════════════ */}
         {!prizeRevealed && (
@@ -663,14 +645,6 @@ export default function ScratchPage() {
             {/* Terms and Conditions */}
             <TermsAndConditions prizeType={coupon.prize} />
 
-            <button
-              id="btn-back-home"
-              onClick={() => navigate('/')}
-              className="btn-primary w-full py-3"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </button>
           </div>
         )}
       </div>
