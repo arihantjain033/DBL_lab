@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: 16 185 129;
+    --color-gold: 245 158 11;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans antialiased bg-primary-950 text-white;
+    min-height: 100dvh;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-primary-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary-500;
+  }
+}
+
+@layer components {
+  /* Glass card */
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+
+  /* Gold gradient text */
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-gold-300 via-gold-400 to-gold-600 bg-clip-text text-transparent;
+  }
+
+  /* Green gradient text */
+  .text-gradient-green {
+    @apply bg-gradient-to-r from-primary-300 via-primary-400 to-primary-600 bg-clip-text text-transparent;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center gap-2 px-6 py-3
+      bg-gradient-to-r from-primary-600 to-primary-500
+      hover:from-primary-500 hover:to-primary-400
+      text-white font-semibold rounded-xl
+      shadow-lg shadow-primary-900/40
+      transition-all duration-200 ease-out
+      active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Gold button */
+  .btn-gold {
+    @apply relative inline-flex items-center justify-center gap-2 px-6 py-3
+      bg-gradient-to-r from-gold-500 to-gold-400
+      hover:from-gold-400 hover:to-gold-300
+      text-primary-950 font-bold rounded-xl
+      shadow-lg shadow-gold-900/30
+      transition-all duration-200 ease-out
+      active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Input field */
+  .input-field {
+    @apply w-full px-4 py-3
+      bg-white/5 border border-white/10
+      text-white placeholder:text-white/30
+      rounded-xl
+      focus:outline-none focus:border-primary-500/60 focus:bg-white/8
+      transition-all duration-200;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply glass rounded-2xl p-6 flex flex-col gap-1;
+  }
+
+  /* Page header */
+  .page-section {
+    @apply animate-fade-in;
+  }
+}
+
+@layer utilities {
+  .bg-white\/8 {
+    background-color: rgb(255 255 255 / 0.08);
+  }
+
+  /* Gold shimmer animation */
+  .shimmer-gold {
+    background: linear-gradient(90deg, #d97706 0%, #fcd34d 40%, #f59e0b 60%, #d97706 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* Scratch card overlay */
+  .scratch-overlay {
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><circle cx='16' cy='16' r='10' fill='rgba(245,158,11,0.6)' stroke='white' stroke-width='2'/></svg>") 16 16, crosshair;
+  }
+
+  .no-select {
+    @apply select-none;
+  }
+}
