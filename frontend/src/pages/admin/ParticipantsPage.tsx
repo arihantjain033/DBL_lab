@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { campaignApi } from '@/lib/api';
 import {
   Users, User, Phone, MapPin, Trophy,
-  ChevronLeft, ChevronRight, CheckCircle,
+  CheckCircle,
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Pagination from '@/components/admin/Pagination';

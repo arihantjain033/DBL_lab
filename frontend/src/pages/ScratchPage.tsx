@@ -5,13 +5,15 @@ import ReactConfetti from 'react-confetti';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Trophy, Gift, Calendar, Hash, ArrowLeft,
-  CheckCircle, Download, Sparkles, User, Phone, MapPin,
+  Download, Sparkles, User, Phone, MapPin,
 } from 'lucide-react';
 import ScratchCard from '@/components/ScratchCard';
 import { userApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { jsPDF } from 'jspdf';
+import TermsAndConditions from '@/components/ui/TermsAndConditions';
+import { getPrizeTerms } from '@/lib/terms';
 
 const SCRATCH_THRESHOLD = 35; // Configurable threshold (e.g. 35%)
 
@@ -133,20 +135,28 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   doc.setFillColor(240, 253, 244);
   doc.setDrawColor(16, 185, 129);
   doc.setLineWidth(0.4);
-  doc.roundedRect(15, y, W - 30, 38, 2, 2, 'FD');
+  const terms = getPrizeTerms(receipt.prize);
+  const boxHeight = 12 + terms.length * 6 + 4;
+  
+  doc.roundedRect(15, y, W - 30, boxHeight, 2, 2, 'FD');
   doc.setTextColor(4, 120, 87);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('HOW TO REDEEM', 20, y + 8);
+  doc.text('TERMS & CONDITIONS', 20, y + 8);
+  
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(55, 65, 81);
-  const steps = [
-    '1. Visit DBL Pathology Lab before the expiry date.',
-    '2. Show this receipt or QR code to the reception staff.',
-    '3. Provide your registered mobile number for verification.',
-    '4. This coupon is valid for ONE use only and is non-transferable.',
-  ];
-  steps.forEach((step, i) => doc.text(step, 20, y + 16 + i * 6));
+  terms.forEach((term, i) => {
+    if (term.isSpecial) {
+      doc.setTextColor(217, 119, 6); // amber-600
+      doc.setFont('helvetica', 'bold');
+      doc.text(`* ${term.text}`, 20, y + 15 + i * 6);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(55, 65, 81);
+    } else {
+      doc.text(`• ${term.text}`, 20, y + 15 + i * 6);
+    }
+  });
 
   // Footer
   const footerY = doc.internal.pageSize.getHeight() - 12;
@@ -551,20 +561,8 @@ export default function ScratchPage() {
               Download Receipt as PDF
             </button>
 
-            {/* Instructions */}
-            <div className="glass rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="w-4 h-4 text-primary-400 flex-shrink-0" />
-                <p className="text-white text-sm font-semibold">How to Redeem</p>
-              </div>
-              <ul className="space-y-1.5 text-primary-300 text-xs leading-relaxed">
-                <li>• Show this screen or downloaded PDF at the lab reception</li>
-                <li>• Receptionist will scan the QR code to verify</li>
-                <li>• Provide your registered mobile number</li>
-                <li>• Coupon is valid for one use only — non-transferable</li>
-                <li>• Visit before the expiry date shown above</li>
-              </ul>
-            </div>
+            {/* Terms and Conditions */}
+            <TermsAndConditions prizeType={coupon.prize} />
 
             <button
               id="btn-back-home"

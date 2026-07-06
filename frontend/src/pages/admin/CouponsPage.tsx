@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { campaignApi, couponApi } from '@/lib/api';
 import {
   Plus, Trash2, Ticket, User, Phone, MapPin,
-  CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight,
+  CheckCircle, Clock, XCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';

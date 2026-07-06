@@ -4,6 +4,7 @@ import { couponApi } from '@/lib/api';
 import { ScanLine, Search, CheckCircle2, AlertCircle, User, Phone, Trophy, Calendar, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import TermsAndConditions from '@/components/ui/TermsAndConditions';
 
 interface VerifyResult {
   coupon: any;
@@ -146,11 +147,14 @@ export default function VerifyPage() {
           )}
 
           {coupon.redeemed && (
-            <div className="flex items-center justify-center gap-2 py-3 text-blue-400 bg-blue-500/10 rounded-xl">
+            <div className="flex items-center justify-center gap-2 py-3 text-blue-400 bg-blue-500/10 rounded-xl mb-6">
               <CheckCircle2 className="w-5 h-5" />
               <span className="font-semibold text-sm">This coupon has been redeemed</span>
             </div>
           )}
+
+          {/* Terms and Conditions for Admin reference */}
+          <TermsAndConditions prizeType={coupon.prize} className="bg-black/20 border border-white/5" />
         </div>
       )}
 
