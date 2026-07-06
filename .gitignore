@@ -23,6 +23,7 @@ node_modules/
 npm-debug.log
 yarn-error.log
 yarn-debug.log
+pnpm-debug.log*
 
 # Build output
 dist/
@@ -31,3 +32,4 @@ coverage/
 
 # Miscellaneous
 .eslintcache
+*.tsbuildinfo

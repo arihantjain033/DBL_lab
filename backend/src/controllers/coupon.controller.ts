@@ -50,8 +50,20 @@ export const couponController = {
       const { page, limit } = paginationSchema.parse(req.query);
       const { status } = req.query as { status?: string };
       const offset = (page - 1) * limit;
-      const coupons = await couponRepository.listByCampaign(campaignId, offset, limit, status);
-      res.json({ success: true, data: { coupons, page, limit } });
+      const [coupons, total] = await Promise.all([
+        couponRepository.listByCampaign(campaignId, offset, limit, status),
+        couponRepository.countTotalByCampaign(campaignId, status)
+      ]);
+      res.json({ 
+        success: true, 
+        data: { 
+          coupons, 
+          total, 
+          page, 
+          limit, 
+          totalPages: Math.ceil(total / limit) 
+        } 
+      });
     } catch (err) {
       next(err);
     }

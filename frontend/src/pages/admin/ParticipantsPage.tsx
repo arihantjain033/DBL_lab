@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, CheckCircle,
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import Pagination from '@/components/admin/Pagination';
 
 const STATUS_STYLES: Record<string, { label: string; cls: string; dot: string }> = {
   available: { label: 'Not Scratched', cls: 'text-white/40 bg-white/5',      dot: 'bg-white/20' },
@@ -26,7 +27,12 @@ const fmtDateTime = (d?: string | null) =>
 export default function ParticipantsPage() {
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [page, setPage] = useState(1);
-  const LIMIT = 30;
+  const [limit, setLimit] = useState(() => Number(localStorage.getItem('adminPageSize')) || 50);
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    localStorage.setItem('adminPageSize', newLimit.toString());
+  };
 
   // Load all campaigns
   const { data: campaignsRes } = useQuery({
@@ -40,7 +46,7 @@ export default function ParticipantsPage() {
   const { data: participantsRes, isLoading } = useQuery({
     queryKey: ['participants', activeCampaignId, page],
     queryFn: () =>
-      campaignApi.getParticipants(activeCampaignId, { page, limit: LIMIT }),
+      campaignApi.getParticipants(activeCampaignId, { page, limit }),
     enabled: !!activeCampaignId,
   });
 
@@ -76,7 +82,7 @@ export default function ParticipantsPage() {
 
       {/* Quick stats row */}
       {total > 0 && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard label="Total Registered" value={total} icon={Users} color="text-white" />
           <StatCard label="Scratched Cards" value={scratched} icon={Trophy} color="text-gold-400" />
           <StatCard label="Redeemed" value={redeemed} icon={CheckCircle} color="text-blue-400" />
@@ -117,7 +123,7 @@ export default function ParticipantsPage() {
                     <tr key={p.userId} className="hover:bg-white/[0.02] transition-colors">
                       {/* Row # */}
                       <td className="px-5 py-3 text-white/20 text-xs">
-                        {(page - 1) * LIMIT + i + 1}
+                        {(page - 1) * limit + i + 1}
                       </td>
                       {/* Name */}
                       <td className="px-5 py-3">
@@ -194,28 +200,14 @@ export default function ParticipantsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="p-2 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 disabled:opacity-30 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-white/40 text-sm">
-                Page {page} of {totalPages} · {total} participants
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="p-2 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 disabled:opacity-30 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={total}
+            limit={limit}
+            onPageChange={setPage}
+            onLimitChange={handleLimitChange}
+          />
         </>
       )}
     </div>

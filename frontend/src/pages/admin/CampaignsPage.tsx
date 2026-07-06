@@ -101,7 +101,7 @@ export default function CampaignsPage() {
           <h1 className="font-display text-2xl font-bold text-white">Campaigns</h1>
           <p className="text-primary-400 text-sm mt-0.5">Manage promotional campaigns</p>
         </div>
-        <button id="btn-new-campaign" onClick={openCreate} className="btn-primary">
+        <button id="btn-new-campaign" onClick={openCreate} className="btn-primary min-h-[44px]">
           <Plus className="w-4 h-4" /> New Campaign
         </button>
       </div>
@@ -132,32 +132,32 @@ export default function CampaignsPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-shrink-0 mt-3 sm:mt-0 w-full sm:w-auto">
                 {c.active ? (
                   <button
                     onClick={() => deactivateMutation.mutate(c.id)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+                    className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-colors min-h-[44px]"
                   >
                     <ZapOff className="w-3.5 h-3.5" /> Deactivate
                   </button>
                 ) : (
                   <button
                     onClick={() => activateMutation.mutate(c.id)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs text-primary-400 bg-primary-500/10 hover:bg-primary-500/20 transition-colors"
+                    className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs text-primary-400 bg-primary-500/10 hover:bg-primary-500/20 transition-colors min-h-[44px]"
                   >
                     <Zap className="w-3.5 h-3.5" /> Activate
                   </button>
                 )}
                 <button
                   onClick={() => openEdit(c)}
-                  className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+                  className="p-2 flex-1 sm:flex-none flex items-center justify-center rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-colors min-h-[44px]"
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(c)}
                   disabled={c.active}
-                  className="p-2 rounded-xl text-white/40 hover:text-red-400 hover:bg-red-500/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-2 flex-1 sm:flex-none flex items-center justify-center rounded-xl text-white/40 hover:text-red-400 hover:bg-red-500/5 transition-colors disabled:opacity-30 disabled:cursor-not-allowed min-h-[44px]"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -169,8 +169,8 @@ export default function CampaignsPage() {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={closeModal}>
-          <div className="glass rounded-3xl p-8 w-full max-w-md shadow-glass animate-scale-in" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm" onClick={closeModal}>
+          <div className="glass rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-glass animate-slide-up sm:animate-scale-in" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-display text-xl font-bold text-white mb-6">
               {editing ? 'Edit Campaign' : 'Create Campaign'}
             </h2>
@@ -182,7 +182,7 @@ export default function CampaignsPage() {
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. DBL 1st Anniversary"
-                  className="input-field"
+                  className="input-field min-h-[44px]"
                   required
                 />
               </div>
@@ -198,16 +198,16 @@ export default function CampaignsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-primary-300 mb-1.5">Start Date *</label>
-                  <input type="datetime-local" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} className="input-field" required />
+                  <input type="datetime-local" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))} className="input-field min-h-[44px] w-full" required />
                 </div>
                 <div>
                   <label className="block text-xs text-primary-300 mb-1.5">End Date *</label>
-                  <input type="datetime-local" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} className="input-field" required />
+                  <input type="datetime-local" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))} className="input-field min-h-[44px] w-full" required />
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={closeModal} className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 text-sm transition-colors">Cancel</button>
-                <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="btn-primary flex-1 py-2.5">
+                <button type="button" onClick={closeModal} className="flex-1 px-4 py-3 sm:py-2.5 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 text-sm transition-colors min-h-[44px]">Cancel</button>
+                <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="btn-primary flex-1 py-3 sm:py-2.5 min-h-[44px]">
                   {(createMutation.isPending || updateMutation.isPending) ? <LoadingSpinner size="sm" /> : editing ? 'Save Changes' : 'Create'}
                 </button>
               </div>

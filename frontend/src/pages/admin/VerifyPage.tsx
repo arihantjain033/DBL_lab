@@ -71,7 +71,7 @@ export default function VerifyPage() {
 
       {/* Search form */}
       <div className="glass rounded-2xl p-6">
-        <form onSubmit={handleVerify} className="flex gap-3">
+        <form onSubmit={handleVerify} className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 pointer-events-none" />
             <input
@@ -80,7 +80,7 @@ export default function VerifyPage() {
               value={couponNo}
               onChange={(e) => setCouponNo(e.target.value.toUpperCase())}
               placeholder="DBL-000001"
-              className="input-field pl-10 font-mono uppercase tracking-wider"
+              className="input-field pl-10 font-mono uppercase tracking-wider min-h-[44px] w-full"
               maxLength={10}
               autoComplete="off"
             />
@@ -89,7 +89,7 @@ export default function VerifyPage() {
             id="btn-verify-coupon"
             type="submit"
             disabled={verifyMutation.isPending}
-            className="btn-primary flex-shrink-0"
+            className="btn-primary flex-shrink-0 w-full sm:w-auto min-h-[44px] justify-center"
           >
             {verifyMutation.isPending ? <LoadingSpinner size="sm" /> : (
               <>
@@ -138,9 +138,9 @@ export default function VerifyPage() {
               className="btn-gold w-full py-3.5 text-base"
             >
               {redeemMutation.isPending ? <LoadingSpinner size="sm" /> : (
-                <>
+                <div className="flex items-center justify-center gap-2 w-full">
                   <CheckCircle2 className="w-5 h-5" /> Mark as Redeemed
-                </>
+                </div>
               )}
             </button>
           )}

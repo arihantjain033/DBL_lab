@@ -113,7 +113,7 @@ export default function AdminLayout() {
   return (
     <div className="flex h-dvh bg-primary-950 text-white overflow-hidden">
       {/* Desktop Sidebar */}
-      <div className="w-60 flex-shrink-0">
+      <div className="hidden lg:block w-60 flex-shrink-0">
         <Sidebar />
       </div>
 
@@ -148,7 +148,7 @@ export default function AdminLayout() {
         </div>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </main>
       </div>

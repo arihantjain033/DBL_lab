@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import Pagination from '@/components/admin/Pagination';
 
 interface PrizeRow { prize: string; quantity: number }
 
@@ -26,7 +27,12 @@ export default function CouponsPage() {
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [page, setPage] = useState(1);
-  const LIMIT = 50;
+  const [limit, setLimit] = useState(() => Number(localStorage.getItem('adminPageSize')) || 50);
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    localStorage.setItem('adminPageSize', newLimit.toString());
+  };
 
   const [prizes, setPrizes] = useState<PrizeRow[]>([{ prize: '', quantity: 1 }]);
   const [expiryDate, setExpiryDate] = useState('');
@@ -42,13 +48,14 @@ export default function CouponsPage() {
     queryKey: ['coupons', activeCampaignId, filterStatus, page],
     queryFn: () =>
       couponApi.list(activeCampaignId, {
-        limit: LIMIT,
+        limit,
         page,
         ...(filterStatus ? { status: filterStatus } : {}),
       }),
     enabled: !!activeCampaignId,
   });
   const coupons: any[] = couponsRes?.data?.data?.coupons ?? [];
+  const totalItems = couponsRes?.data?.data?.total ?? 0;
   const totalPages = couponsRes?.data?.data?.totalPages ?? 1;
 
   const generateMutation = useMutation({
@@ -85,7 +92,7 @@ export default function CouponsPage() {
             Full coupon registry with holder details
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {/* Campaign picker */}
           {campaigns.length > 1 && (
             <select
@@ -112,7 +119,7 @@ export default function CouponsPage() {
           <button
             id="btn-generate-coupons"
             onClick={() => setShowGenerator(true)}
-            className="btn-primary flex-shrink-0"
+            className="btn-primary flex-shrink-0 min-h-[44px]"
           >
             <Plus className="w-4 h-4" /> Generate Coupons
           </button>
@@ -212,39 +219,25 @@ export default function CouponsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="p-2 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 disabled:opacity-30 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-white/40 text-sm">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="p-2 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 disabled:opacity-30 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            limit={limit}
+            onPageChange={setPage}
+            onLimitChange={handleLimitChange}
+          />
         </>
       )}
 
       {/* Generator Modal */}
       {showGenerator && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
           onClick={() => setShowGenerator(false)}
         >
           <div
-            className="glass rounded-3xl p-8 w-full max-w-lg shadow-glass animate-scale-in overflow-y-auto max-h-[90dvh]"
+            className="glass rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-glass animate-slide-up sm:animate-scale-in overflow-y-auto max-h-[90dvh]"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="font-display text-xl font-bold text-white mb-1">Generate Coupons</h2>
@@ -261,10 +254,10 @@ export default function CouponsPage() {
                       placeholder="Prize name (e.g. ₹300 Discount)"
                       value={row.prize}
                       onChange={(e) => updatePrize(i, 'prize', e.target.value)}
-                      className="input-field text-sm"
+                      className="input-field text-sm w-full min-h-[44px]"
                     />
                   </div>
-                  <div className="w-24 flex-shrink-0">
+                  <div className="w-20 sm:w-24 flex-shrink-0">
                     <input
                       type="number"
                       min={1}
@@ -272,7 +265,7 @@ export default function CouponsPage() {
                       placeholder="Qty"
                       value={row.quantity}
                       onChange={(e) => updatePrize(i, 'quantity', parseInt(e.target.value) || 1)}
-                      className="input-field text-sm"
+                      className="input-field text-sm w-full min-h-[44px]"
                     />
                   </div>
                   {prizes.length > 1 && (
@@ -289,7 +282,7 @@ export default function CouponsPage() {
 
             <button
               onClick={addPrizeRow}
-              className="flex items-center gap-2 text-primary-400 hover:text-white text-sm transition-colors mb-5"
+              className="flex items-center justify-center sm:justify-start gap-2 text-primary-400 hover:text-white text-sm transition-colors mb-5 w-full sm:w-auto min-h-[44px]"
             >
               <Plus className="w-3.5 h-3.5" /> Add Prize Tier
             </button>
@@ -311,10 +304,10 @@ export default function CouponsPage() {
               <span className="font-bold text-white">{totalQty.toLocaleString()}</span>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => setShowGenerator(false)}
-                className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 text-sm transition-colors"
+                className="flex-1 px-4 py-3 sm:py-2.5 rounded-xl border border-white/10 text-white/60 hover:bg-white/5 text-sm transition-colors min-h-[44px]"
               >
                 Cancel
               </button>
@@ -322,7 +315,7 @@ export default function CouponsPage() {
                 id="btn-confirm-generate"
                 onClick={() => generateMutation.mutate()}
                 disabled={generateMutation.isPending || !activeCampaignId || totalQty === 0}
-                className="btn-gold flex-1 py-2.5"
+                className="btn-gold flex-1 py-3 sm:py-2.5 min-h-[44px]"
               >
                 {generateMutation.isPending
                   ? <LoadingSpinner size="sm" />
