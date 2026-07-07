@@ -46,14 +46,14 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
-  const MARGIN = 20;
-  const FOOTER_RESERVE = 22; // space kept at the bottom for the footer
+  const MARGIN        = 15;   // tighter margin (was 20)
+  const FOOTER_RESERVE = 20;  // reduced reserve (was 22)
 
   /** Advance currentY and add a new page if we would overflow. */
   const ensureSpace = (cy: number, needed: number): number => {
     if (cy + needed > H - FOOTER_RESERVE) {
       doc.addPage();
-      return 16; // top margin on new page
+      return 14;
     }
     return cy;
   };
@@ -62,38 +62,38 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   // 1. Header (Emerald Green)
   // ----------------------------------------
   doc.setFillColor(4, 120, 87);
-  doc.rect(0, 0, W, 48, 'F');
+  doc.rect(0, 0, W, 40, 'F');  // 40mm (was 48)
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('DBL Pathology Lab', W / 2, 22, { align: 'center' });
+  doc.text('DBL Pathology Lab', W / 2, 18, { align: 'center' });
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Premium Diagnostic Services', W / 2, 30, { align: 'center' });
+  doc.text('Every Test, A Story Of Health', W / 2, 26, { align: 'center' });
 
   doc.setDrawColor(245, 158, 11);
   doc.setLineWidth(0.8);
-  doc.line(MARGIN, 38, W - MARGIN, 38);
+  doc.line(MARGIN, 33, W - MARGIN, 33);
 
   // ----------------------------------------
   // 2. Title & Prize Box
   // ----------------------------------------
-  let cy = 58;
+  let cy = 49;  // tighter start (was 58)
   doc.setTextColor(17, 24, 39);
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('SCRATCH CARD REWARD RECEIPT', W / 2, cy, { align: 'center' });
 
-  cy += 10;
+  cy += 8;  // (was 10)
   const freePrizes = [
     'Free Full Body Health Check-up',
     'Digital Thermometer',
     'Free Blood Sugar Test',
   ];
   const isDiscount = !freePrizes.includes(receipt.prize);
-  const prizeBoxH = isDiscount ? 32 : 22;
+  const prizeBoxH = isDiscount ? 28 : 20;  // tighter (was 32/22)
 
   cy = ensureSpace(cy, prizeBoxH + 4);
   doc.setFillColor(254, 243, 199);
@@ -102,161 +102,164 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   doc.roundedRect(MARGIN, cy, W - MARGIN * 2, prizeBoxH, 3, 3, 'FD');
 
   doc.setTextColor(146, 64, 14);
-  doc.setFontSize(15);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(receipt.prize, W / 2, cy + 14, { align: 'center', maxWidth: W - 50 });
+  doc.text(receipt.prize, W / 2, cy + 12, { align: 'center', maxWidth: W - 50 });
 
   if (isDiscount) {
-    doc.setFontSize(10.5);
+    doc.setFontSize(9.5);
     doc.setTextColor(180, 83, 9);
-    doc.text('Valid on a minimum billing amount of Rs. 200.', W / 2, cy + 25, { align: 'center' });
+    doc.text('Valid on a minimum billing amount of Rs. 200.', W / 2, cy + 22, { align: 'center' });
   }
 
-  cy += prizeBoxH + 8;
+  cy += prizeBoxH + 5;  // (was +8)
 
   // ----------------------------------------
   // 3. Coupon Number
   // ----------------------------------------
-  cy = ensureSpace(cy, 18);
+  cy = ensureSpace(cy, 16);
   doc.setFillColor(236, 253, 245);
   doc.setDrawColor(16, 185, 129);
-  doc.roundedRect(MARGIN, cy, W - MARGIN * 2, 16, 2, 2, 'FD');
+  doc.roundedRect(MARGIN, cy, W - MARGIN * 2, 14, 2, 2, 'FD');  // 14mm (was 16)
 
   doc.setTextColor(4, 120, 87);
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Coupon Number: ${receipt.couponNo}`, W / 2, cy + 10.5, { align: 'center' });
+  doc.text(`Coupon Number: ${receipt.couponNo}`, W / 2, cy + 9.5, { align: 'center' });
 
-  cy += 24;
+  cy += 19;  // (was 24)
 
   // ----------------------------------------
   // 4. Holder Details (left column) + QR (right)
   // ----------------------------------------
   const rows: [string, string][] = [
-    ['Patient Name',   receipt.holderName],
-    ['Mobile Number',  receipt.holderPhone],
-    ['City',           receipt.holderCity || '—'],
-    ['Issue Date',     receipt.scratchedOn],
-    ['Expiry Date',    receipt.expiryDate],
+    ['Patient Name',  receipt.holderName],
+    ['Mobile Number', receipt.holderPhone],
+    ['City',          receipt.holderCity || '—'],
+    ['Issue Date',    receipt.scratchedOn],
+    ['Expiry Date',   receipt.expiryDate],
   ];
-  const holderBlockH = 10 + rows.length * 9 + 6;
-  cy = ensureSpace(cy, holderBlockH + 10);
+  const ROW_H = 8;  // tighter row spacing (was 9)
+  const holderBlockH = 10 + rows.length * ROW_H + 4;
+  cy = ensureSpace(cy, holderBlockH + 8);
 
   doc.setTextColor(17, 24, 39);
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text('HOLDER DETAILS', MARGIN, cy);
 
   doc.setDrawColor(229, 231, 235);
   doc.setLineWidth(0.4);
-  doc.line(MARGIN, cy + 4, W - MARGIN, cy + 4);
+  doc.line(MARGIN, cy + 3.5, W - MARGIN, cy + 3.5);
 
   const detailsStartY = cy;
-  doc.setFontSize(10.5);
+  doc.setFontSize(9.5);
   rows.forEach(([label, value], i) => {
-    const rowY = cy + 13 + i * 9;
+    const rowY = cy + 11 + i * ROW_H;
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(107, 114, 128);
-    doc.text(label, MARGIN + 2, rowY);
+    doc.text(label, MARGIN + 1, rowY);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(17, 24, 39);
-    doc.text(value, 65, rowY);
+    doc.text(value, 62, rowY);
   });
 
   if (qrDataUrl) {
-    const qrSize = 44;
+    const qrSize = 38;  // slightly smaller (was 44)
     const qrX = W - MARGIN - qrSize;
-    doc.addImage(qrDataUrl, 'PNG', qrX, detailsStartY + 6, qrSize, qrSize);
+    doc.addImage(qrDataUrl, 'PNG', qrX, detailsStartY + 4, qrSize, qrSize);
     doc.setFontSize(7);
     doc.setTextColor(156, 163, 175);
     doc.setFont('helvetica', 'normal');
-    doc.text('Scan to verify', qrX + qrSize / 2, detailsStartY + 6 + qrSize + 4, { align: 'center' });
+    doc.text('Scan to verify', qrX + qrSize / 2, detailsStartY + 4 + qrSize + 4, { align: 'center' });
   }
 
-  cy += holderBlockH + 10;
+  cy += holderBlockH + 6;  // (was +10)
 
   // ----------------------------------------
-  // 5. How To Redeem
+  // 5 & 6. Side-by-Side: How To Redeem & Terms & Conditions
   // ----------------------------------------
   const instructions = [
-    '1. Visit DBL Pathology Lab before the expiry date.',
-    '2. Show this receipt or QR code to the reception staff.',
-    '3. Provide your registered mobile number for verification.',
-    '4. This coupon is valid for ONE use only and is non-transferable.',
+    '1. Visit DBL Pathology Lab before expiry.',
+    '2. Show this receipt or QR to reception.',
+    '3. Provide registered mobile number.',
+    '4. Valid for ONE use, non-transferable.',
   ];
-  const redeemBlockH = 12 + instructions.length * 8 + 6;
-  cy = ensureSpace(cy, redeemBlockH + 10);
 
-  doc.setTextColor(17, 24, 39);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('HOW TO REDEEM', MARGIN, cy);
-
-  doc.setDrawColor(229, 231, 235);
-  doc.setLineWidth(0.4);
-  doc.line(MARGIN, cy + 4, W - MARGIN, cy + 4);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(55, 65, 81);
-  instructions.forEach((inst, i) => {
-    doc.text(inst, MARGIN + 2, cy + 13 + i * 8);
-  });
-
-  cy += redeemBlockH + 10;
-
-  // ----------------------------------------
-  // 6. Terms & Conditions
-  // ----------------------------------------
   const terms = [
     'Valid for 6 Months',
     'One Scratch Card per Patient',
     'Non-transferable',
     'Cannot be exchanged for cash',
-    'Prize must be claimed before expiry',
+    'Claim prize before expiry',
     'Management reserves all rights',
+    'Discount vouchers on next visit only.',
   ];
-  const termsBoxH = 14 + terms.length * 8 + 6;
-  cy = ensureSpace(cy, termsBoxH + 10);
 
+  const gap  = 8;   // (was 10)
+  const colW = (W - 2 * MARGIN - gap) / 2;
+  const leftX  = MARGIN;
+  const rightX = MARGIN + colW + gap;
+
+  const COL_ROW_H = 7;
+  const leftH  = 14 + instructions.length * COL_ROW_H + 4;
+  const rightH = 14 + terms.length * COL_ROW_H + 4;
+  const blockH = Math.max(leftH, rightH);
+
+  cy = ensureSpace(cy, blockH + 6);
+
+  // ---------- LEFT COLUMN (How to Redeem) ----------
   doc.setFillColor(249, 250, 251);
   doc.setDrawColor(209, 213, 219);
   doc.setLineWidth(0.3);
-  doc.roundedRect(MARGIN, cy, W - MARGIN * 2, termsBoxH, 2, 2, 'FD');
+  doc.roundedRect(leftX, cy, colW, blockH, 2, 2, 'FD');
 
   doc.setTextColor(17, 24, 39);
-  doc.setFontSize(11);
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
-  doc.text('TERMS & CONDITIONS', MARGIN + 6, cy + 10);
+  doc.text('HOW TO REDEEM', leftX + 4, cy + 8);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9.5);
-  doc.setTextColor(75, 85, 99);
-  terms.forEach((term, i) => {
-    doc.text(`• ${term}`, MARGIN + 6, cy + 19 + i * 8);
+  doc.setFontSize(8);
+  doc.setTextColor(55, 65, 81);
+  instructions.forEach((inst, i) => {
+    const lines = doc.splitTextToSize(inst, colW - 8);
+    doc.text(lines, leftX + 4, cy + 15 + i * COL_ROW_H);
   });
 
-  cy += termsBoxH + 14;
+  // ---------- RIGHT COLUMN (Terms & Conditions) ----------
+  doc.setFillColor(249, 250, 251);
+  doc.setDrawColor(209, 213, 219);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(rightX, cy, colW, blockH, 2, 2, 'FD');
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TERMS & CONDITIONS', rightX + 4, cy + 8);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(75, 85, 99);
+  terms.forEach((term, i) => {
+    const lines = doc.splitTextToSize(`• ${term}`, colW - 8);
+    doc.text(lines, rightX + 4, cy + 15 + i * COL_ROW_H);
+  });
+
+  cy += blockH + 5;
 
   // ----------------------------------------
   // 7. Footer — always below all content
   // ----------------------------------------
-  const footerY = Math.max(cy + 8, H - 18);
-  // If footer would exceed page, add a new page
-  if (footerY > H - 10) {
-    doc.addPage();
-    cy = 20;
-  }
-  const actualFooterY = footerY > H - 10 ? 30 : footerY;
-
+  const footerY = Math.max(cy + 4, H - 16);
   doc.setDrawColor(209, 213, 219);
   doc.setLineWidth(0.4);
-  doc.line(MARGIN, actualFooterY - 6, W - MARGIN, actualFooterY - 6);
+  doc.line(MARGIN, footerY - 5, W - MARGIN, footerY - 5);
 
   doc.setTextColor(107, 114, 128);
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'italic');
-  doc.text('Every Test, A Story Of Health', W / 2, actualFooterY + 2, { align: 'center' });
+  doc.text('Every Test, A Story Of Health', W / 2, footerY + 2, { align: 'center' });
 
   doc.save(`DBL-Coupon-${receipt.couponNo}.pdf`);
 }
@@ -302,7 +305,7 @@ export default function ScratchPage() {
     if (!state?.user || !isAtLeastScratchReady()) {
       navigate('/session-expired', { replace: true });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── API mutation ──
@@ -387,8 +390,8 @@ export default function ScratchPage() {
         }),
         expiryDate: coupon.expiryDate
           ? new Date(coupon.expiryDate).toLocaleDateString('en-IN', {
-              day: '2-digit', month: 'long', year: 'numeric',
-            })
+            day: '2-digit', month: 'long', year: 'numeric',
+          })
           : 'No Expiry',
         campaignName: state?.campaign?.name ?? 'DBL Pathology Lab',
         labName: 'DBL Pathology Lab',
@@ -418,14 +421,14 @@ export default function ScratchPage() {
   // ── QR value: full receipt JSON so scanning shows all details ──
   const qrValue = coupon
     ? JSON.stringify({
-        lab: 'DBL Pathology Lab',
-        coupon: coupon.couponNo,
-        prize: coupon.prize,
-        holder: state?.user?.name,
-        phone: state?.user?.phone,
-        validUntil: coupon.expiryDate ? fmtDate(coupon.expiryDate) : 'No Expiry',
-        verify: `${window.location.origin}/verify/${coupon.couponNo}`,
-      })
+      lab: 'DBL Pathology Lab',
+      coupon: coupon.couponNo,
+      prize: coupon.prize,
+      holder: state?.user?.name,
+      phone: state?.user?.phone,
+      validUntil: coupon.expiryDate ? fmtDate(coupon.expiryDate) : 'No Expiry',
+      verify: `${window.location.origin}/verify/${coupon.couponNo}`,
+    })
     : '';
 
   // ────────────────────────────────────────────────────────────
@@ -605,13 +608,13 @@ export default function ScratchPage() {
 
               {/* Details grid */}
               <div className="space-y-3 mb-5">
-                <DetailRow icon={Hash}     label="Coupon Number" value={coupon.couponNo} mono />
-                <DetailRow icon={User}     label="Name"          value={state?.user?.name} />
-                <DetailRow icon={Phone}    label="Mobile"        value={state?.user?.phone} />
+                <DetailRow icon={Hash} label="Coupon Number" value={coupon.couponNo} mono />
+                <DetailRow icon={User} label="Name" value={state?.user?.name} />
+                <DetailRow icon={Phone} label="Mobile" value={state?.user?.phone} />
                 {state?.user?.city && (
-                  <DetailRow icon={MapPin} label="City"          value={state.user.city} />
+                  <DetailRow icon={MapPin} label="City" value={state.user.city} />
                 )}
-                <DetailRow icon={Calendar} label="Valid Until"   value={fmtDate(coupon.expiryDate)} />
+                <DetailRow icon={Calendar} label="Valid Until" value={fmtDate(coupon.expiryDate)} />
               </div>
 
               {/* QR Code — encodes full receipt JSON */}
