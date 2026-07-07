@@ -30,20 +30,18 @@ export const initialFilterState: CouponFilterState = {
 
 export function useCouponFilters(rawCoupons: any[]) {
   const [draftFilters, setDraftFilters] = useState<CouponFilterState>(initialFilterState);
-  const [appliedFilters, setAppliedFilters] = useState<CouponFilterState>(initialFilterState);
 
-  const applyFilters = () => setAppliedFilters(draftFilters);
+  const applyFilters = () => {}; // No-op for compatibility
 
   const resetFilters = () => {
     setDraftFilters(initialFilterState);
-    setAppliedFilters(initialFilterState);
   };
 
   const filteredAndSorted = useMemo(() => {
     let result = [...rawCoupons];
 
-    // Use appliedFilters for actual data transformation!
-    const filters = appliedFilters;
+    // Use live filters directly
+    const filters = draftFilters;
 
     // 1. Global Search
     if (filters.globalSearch) {
@@ -144,7 +142,7 @@ export function useCouponFilters(rawCoupons: any[]) {
     });
 
     return result;
-  }, [rawCoupons, appliedFilters]);
+  }, [rawCoupons, draftFilters]);
 
-  return { draftFilters, setDraftFilters, appliedFilters, applyFilters, resetFilters, filteredAndSorted };
+  return { draftFilters, setDraftFilters, appliedFilters: draftFilters, applyFilters, resetFilters, filteredAndSorted };
 }

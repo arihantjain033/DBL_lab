@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { campaignApi, couponApi } from '@/lib/api';
 import {
@@ -56,12 +56,17 @@ export default function CouponsPage() {
     enabled: campaigns.length > 0,
   });
 
-  const { draftFilters, setDraftFilters, applyFilters, resetFilters, filteredAndSorted } = useCouponFilters(rawCoupons);
+  const { draftFilters, setDraftFilters, resetFilters, filteredAndSorted } = useCouponFilters(rawCoupons);
 
   const handleApplyFilters = () => {
-    applyFilters();
-    setPage(1); // Reset pagination when new filters are applied
+    // applyFilters is a no-op now, filtering is live.
+    // Pagination resets automatically via useEffect.
   };
+
+  // Reset pagination when any filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [draftFilters]);
 
   const handleResetFilters = () => {
     resetFilters();
