@@ -226,7 +226,7 @@ export default function VerifyPage() {
           )}
 
           {/* Terms and Conditions for Admin reference */}
-          <TermsAndConditions prizeType={coupon.prize} className="bg-black/20 border border-white/5" />
+          <TermsAndConditions metadata={(coupon as any).metadata} className="bg-black/20 border border-white/5" />
         </div>
       )}
 

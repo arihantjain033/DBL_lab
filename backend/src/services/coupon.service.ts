@@ -8,6 +8,8 @@ import { logger } from '../utils/logger.js';
 
 type CouponInsert = typeof schema.coupons.$inferInsert;
 
+import { prizeRulesRepository } from '../repositories/prize-rules.repository.js';
+
 export const couponService = {
   /**
    * Generate coupon numbers in the format DBL-XXXXXX
@@ -25,6 +27,39 @@ export const couponService = {
 
     const totalNew = data.prizes.reduce((sum, p) => sum + p.quantity, 0);
     const expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
+
+    // Fetch or create prize rules
+    const rulesMap = new Map<string, any>();
+    for (const p of data.prizes) {
+      if (!rulesMap.has(p.prize)) {
+        let rule = await prizeRulesRepository.findByPrize(p.prize);
+        if (!rule) {
+           const lower = p.prize.toLowerCase();
+           const isDiscount = lower.includes('discount') || lower.includes('voucher') || lower.includes('%');
+           const defaultTerms = [
+             'Valid for 6 Months',
+             'One Scratch Card per Patient',
+             'Non-transferable',
+             'Cannot be exchanged for cash',
+             'Claim prize before expiry',
+             'Management reserves all rights'
+           ];
+           rule = await prizeRulesRepository.upsert({
+             prizeName: p.prize,
+             minimumBilling: isDiscount ? 200 : null,
+             nextVisitOnly: isDiscount,
+             showMinimumBilling: isDiscount,
+             terms: defaultTerms.join('\n'),
+           });
+        }
+        rulesMap.set(p.prize, {
+          minimumBilling: rule.minimumBilling,
+          nextVisitOnly: rule.nextVisitOnly,
+          showMinimumBilling: rule.showMinimumBilling,
+          terms: rule.terms
+        });
+      }
+    }
 
     // Build prize pool
     const prizePool: string[] = [];
@@ -47,6 +82,7 @@ export const couponService = {
       prize,
       status: 'available' as const,
       expiryDate,
+      metadata: rulesMap.get(prize),
     }));
 
     await couponRepository.bulkInsert(records);
@@ -64,6 +100,11 @@ export const couponService = {
     let user = null;
     if (coupon.assignedTo) {
       user = await userRepository.findById(coupon.assignedTo);
+    }
+
+    const rule = await prizeRulesRepository.findByPrize(coupon.prize);
+    if (rule) {
+      coupon.metadata = rule;
     }
 
     return { coupon, user };
@@ -146,6 +187,35 @@ export const couponService = {
       }
     }
 
+    if (data.prize && data.prize !== coupon.prize) {
+      let rule = await prizeRulesRepository.findByPrize(data.prize);
+      if (!rule) {
+         const lower = data.prize.toLowerCase();
+         const isDiscount = lower.includes('discount') || lower.includes('voucher') || lower.includes('%');
+         const defaultTerms = [
+           'Valid for 6 Months',
+           'One Scratch Card per Patient',
+           'Non-transferable',
+           'Cannot be exchanged for cash',
+           'Claim prize before expiry',
+           'Management reserves all rights'
+         ];
+         rule = await prizeRulesRepository.upsert({
+           prizeName: data.prize,
+           minimumBilling: isDiscount ? 200 : null,
+           nextVisitOnly: isDiscount,
+           showMinimumBilling: isDiscount,
+           terms: defaultTerms.join('\n'),
+         });
+      }
+      data.metadata = {
+        minimumBilling: rule.minimumBilling,
+        nextVisitOnly: rule.nextVisitOnly,
+        showMinimumBilling: rule.showMinimumBilling,
+        terms: rule.terms
+      };
+    }
+
     const updated = await couponRepository.update(id, data);
     logger.info(`Coupon ${id} updated by admin`);
     return updated;
@@ -165,6 +235,35 @@ export const couponService = {
   async batchUpdateCoupons(campaignId: string, targetPrize: string, count: number, updateData: any) {
     if (count <= 0) {
       throw new AppError('Count must be greater than 0', 400, 'INVALID_COUNT');
+    }
+
+    if (updateData.prize && updateData.prize !== targetPrize) {
+      let rule = await prizeRulesRepository.findByPrize(updateData.prize);
+      if (!rule) {
+         const lower = updateData.prize.toLowerCase();
+         const isDiscount = lower.includes('discount') || lower.includes('voucher') || lower.includes('%');
+         const defaultTerms = [
+           'Valid for 6 Months',
+           'One Scratch Card per Patient',
+           'Non-transferable',
+           'Cannot be exchanged for cash',
+           'Claim prize before expiry',
+           'Management reserves all rights'
+         ];
+         rule = await prizeRulesRepository.upsert({
+           prizeName: updateData.prize,
+           minimumBilling: isDiscount ? 200 : null,
+           nextVisitOnly: isDiscount,
+           showMinimumBilling: isDiscount,
+           terms: defaultTerms.join('\n'),
+         });
+      }
+      updateData.metadata = {
+        minimumBilling: rule.minimumBilling,
+        nextVisitOnly: rule.nextVisitOnly,
+        showMinimumBilling: rule.showMinimumBilling,
+        terms: rule.terms
+      };
     }
 
     const result = await couponRepository.batchUpdate(campaignId, targetPrize, count, updateData);

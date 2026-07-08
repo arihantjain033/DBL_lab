@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, uuid, integer, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, timestamp, uuid, integer, pgEnum, jsonb } from 'drizzle-orm/pg-core';
 
 // ---- Enums ----
 export const couponStatusEnum = pgEnum('coupon_status', [
@@ -58,6 +58,7 @@ export const coupons = pgTable('coupons', {
   redeemed: boolean('redeemed').notNull().default(false),
   redeemedAt: timestamp('redeemed_at', { withTimezone: true }),
   expiryDate: timestamp('expiry_date', { withTimezone: true }),
+  metadata: jsonb('metadata'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -98,6 +99,19 @@ export const settings = pgTable('settings', {
   value: text('value').notNull(),
   description: text('description'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ====================================================================
+// PRIZE_RULES — Dynamic metadata templates per prize
+// ====================================================================
+export const prizeRules = pgTable('prize_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  prizeName: text('prize_name').notNull().unique(),
+  minimumBilling: integer('minimum_billing'),
+  nextVisitOnly: boolean('next_visit_only').notNull().default(false),
+  showMinimumBilling: boolean('show_minimum_billing').notNull().default(false),
+  terms: text('terms'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // ====================================================================

@@ -3,38 +3,33 @@ export interface Term {
   isSpecial?: boolean;
 }
 
-export function getPrizeTerms(prizeType?: string): Term[] {
-  const commonTerms: Term[] = [
-    { text: 'Valid for 6 Months' },
-    { text: 'One Scratch Card per Patient' },
-    { text: 'Non-transferable' },
-    { text: 'Cannot be exchanged for cash' },
-    { text: 'Prize must be claimed before expiry' },
-    { text: 'Management reserves all rights' },
-  ];
+export function getPrizeTerms(metadata?: any): Term[] {
+  const terms: Term[] = [];
 
-  // List of free prizes that DO NOT get the discount condition
-  const freePrizes = [
-    'Free Full Body Health Check-up',
-    'Digital Thermometer',
-    'Free Blood Sugar Test',
-  ];
+  if (!metadata) return terms;
 
-  // If no prize is passed, just return common (or we can assume discount for safety, but typically common is better)
-  if (!prizeType) return commonTerms;
+  const highlightedTerms: string[] = [];
 
-  // Check if it's a discount prize (i.e. not in the free prizes list)
-  const isDiscount = !freePrizes.includes(prizeType);
-
-  if (isDiscount) {
-    return [
-      ...commonTerms,
-      {
-        text: 'Discount applicable only on a minimum billing of ₹200.',
-        isSpecial: true,
-      },
-    ];
+  if (metadata.showMinimumBilling && metadata.minimumBilling !== null && metadata.minimumBilling !== undefined) {
+    const text = `Discount applicable only on a minimum billing of ₹${metadata.minimumBilling}.`;
+    terms.push({ text, isSpecial: true });
+    highlightedTerms.push(text.toLowerCase());
   }
 
-  return commonTerms;
+  if (metadata.nextVisitOnly) {
+    const text = 'Discount vouchers applicable on next visit only.';
+    terms.push({ text, isSpecial: true });
+    highlightedTerms.push(text.toLowerCase());
+  }
+
+  if (metadata.terms) {
+    const lines = String(metadata.terms).replace(/\\n/g, '\n').split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    lines.forEach(line => {
+      if (!highlightedTerms.includes(line.toLowerCase())) {
+        terms.push({ text: line, isSpecial: false });
+      }
+    });
+  }
+
+  return terms;
 }

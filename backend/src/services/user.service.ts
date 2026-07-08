@@ -2,6 +2,7 @@ import { userRepository } from '../repositories/user.repository.js';
 import { couponRepository, claimRepository } from '../repositories/coupon.repository.js';
 import { campaignRepository } from '../repositories/campaign.repository.js';
 import { settingsRepository } from '../repositories/settings.repository.js';
+import { prizeRulesRepository } from '../repositories/prize-rules.repository.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { RegisterUserInput, ScratchInput } from '../validators/index.js';
 import { Request } from 'express';
@@ -29,6 +30,8 @@ export const userService = {
       // If they already have a coupon, return it
       const existingCoupon = await couponRepository.findByUserId(existing.id);
       if (existingCoupon) {
+        const rule = await prizeRulesRepository.findByPrize(existingCoupon.prize);
+        (existingCoupon as any).metadata = rule;
         return { user: existing, alreadyRegistered: true, existingCoupon };
       }
       return { user: existing, alreadyRegistered: true, existingCoupon: null };
@@ -87,9 +90,12 @@ export const scratchService = {
       browser: extractBrowser(userAgent),
     });
 
+    const rule = await prizeRulesRepository.findByPrize(coupon.prize);
+
     return {
       couponNo: coupon.couponNo,
       prize: coupon.prize,
+      metadata: rule,
       expiryDate: coupon.expiryDate?.toISOString() ?? null,
     };
   },

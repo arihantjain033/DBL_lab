@@ -3,11 +3,12 @@ import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface TermsAndConditionsProps {
   prizeType?: string;
+  metadata?: any;
   className?: string;
 }
 
-export default function TermsAndConditions({ prizeType, className = '' }: TermsAndConditionsProps) {
-  const terms = getPrizeTerms(prizeType);
+export default function TermsAndConditions({ metadata, className = '' }: TermsAndConditionsProps) {
+  const terms = getPrizeTerms(metadata);
 
   return (
     <div className={`glass rounded-2xl p-6 ${className}`}>

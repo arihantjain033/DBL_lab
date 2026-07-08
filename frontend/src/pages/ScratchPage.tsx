@@ -29,6 +29,7 @@ interface ScratchResult {
 interface ReceiptData {
   couponNo: string;
   prize: string;
+  metadata?: any;
   holderName: string;
   holderPhone: string;
   holderCity: string;
@@ -87,13 +88,11 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   doc.text('SCRATCH CARD REWARD RECEIPT', W / 2, cy, { align: 'center' });
 
   cy += 8;  // (was 10)
-  const freePrizes = [
-    'Free Full Body Health Check-up',
-    'Digital Thermometer',
-    'Free Blood Sugar Test',
-  ];
-  const isDiscount = !freePrizes.includes(receipt.prize);
-  const prizeBoxH = isDiscount ? 28 : 20;  // tighter (was 32/22)
+  const meta = receipt.metadata || {};
+  const showMinimumBilling = meta.showMinimumBilling === true;
+  const minimumBillingText = `Discount applicable only on a minimum billing of ₹${meta.minimumBilling || 0}.`;
+
+  const prizeBoxH = showMinimumBilling ? 28 : 20;  // tighter (was 32/22)
 
   cy = ensureSpace(cy, prizeBoxH + 4);
   doc.setFillColor(254, 243, 199);
@@ -106,10 +105,10 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   doc.setFont('helvetica', 'bold');
   doc.text(receipt.prize, W / 2, cy + 12, { align: 'center', maxWidth: W - 50 });
 
-  if (isDiscount) {
+  if (showMinimumBilling) {
     doc.setFontSize(9.5);
     doc.setTextColor(180, 83, 9);
-    doc.text('Valid on a minimum billing amount of Rs. 200.', W / 2, cy + 22, { align: 'center' });
+    doc.text(minimumBillingText, W / 2, cy + 22, { align: 'center' });
   }
 
   cy += prizeBoxH + 5;  // (was +8)
@@ -186,24 +185,47 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
     '4. Valid for ONE use, non-transferable.',
   ];
 
-  const terms = [
-    'Valid for 6 Months',
-    'One Scratch Card per Patient',
-    'Non-transferable',
-    'Cannot be exchanged for cash',
-    'Claim prize before expiry',
-    'Management reserves all rights',
-    'Discount vouchers on next visit only.',
-  ];
+  const terms: string[] = [];
+  const highlightedRules: string[] = [];
+
+  if (showMinimumBilling) {
+    highlightedRules.push(minimumBillingText.toLowerCase());
+  }
+
+  if (meta.nextVisitOnly) {
+    const nextVisitText = 'Discount vouchers applicable on next visit only.';
+    terms.push(nextVisitText);
+    highlightedRules.push(nextVisitText.toLowerCase());
+  }
+
+  if (meta.terms) {
+    const lines = String(meta.terms).replace(/\\n/g, '\n').split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    lines.forEach(line => {
+      if (!highlightedRules.includes(line.toLowerCase())) {
+        terms.push(line);
+      }
+    });
+  }
 
   const gap  = 8;   // (was 10)
   const colW = (W - 2 * MARGIN - gap) / 2;
   const leftX  = MARGIN;
   const rightX = MARGIN + colW + gap;
 
-  const COL_ROW_H = 7;
-  const leftH  = 14 + instructions.length * COL_ROW_H + 4;
-  const rightH = 14 + terms.length * COL_ROW_H + 4;
+  const COL_ROW_H = 5.5; // Tighter line height for wrapped lines
+
+  let leftTotalLines = 0;
+  instructions.forEach(inst => {
+    leftTotalLines += doc.splitTextToSize(inst, colW - 8).length;
+  });
+
+  let rightTotalLines = 0;
+  terms.forEach(term => {
+    rightTotalLines += doc.splitTextToSize(`• ${term}`, colW - 8).length;
+  });
+
+  const leftH  = 14 + leftTotalLines * COL_ROW_H + 4;
+  const rightH = 14 + rightTotalLines * COL_ROW_H + 4;
   const blockH = Math.max(leftH, rightH);
 
   cy = ensureSpace(cy, blockH + 6);
@@ -222,9 +244,11 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(55, 65, 81);
-  instructions.forEach((inst, i) => {
+  let currentLeftY = cy + 13;
+  instructions.forEach((inst) => {
     const lines = doc.splitTextToSize(inst, colW - 8);
-    doc.text(lines, leftX + 4, cy + 15 + i * COL_ROW_H);
+    doc.text(lines, leftX + 4, currentLeftY);
+    currentLeftY += lines.length * COL_ROW_H;
   });
 
   // ---------- RIGHT COLUMN (Terms & Conditions) ----------
@@ -241,9 +265,11 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(75, 85, 99);
-  terms.forEach((term, i) => {
+  let currentRightY = cy + 13;
+  terms.forEach((term) => {
     const lines = doc.splitTextToSize(`• ${term}`, colW - 8);
-    doc.text(lines, rightX + 4, cy + 15 + i * COL_ROW_H);
+    doc.text(lines, rightX + 4, currentRightY);
+    currentRightY += lines.length * COL_ROW_H;
   });
 
   cy += blockH + 5;
@@ -382,6 +408,7 @@ export default function ScratchPage() {
       const receipt: ReceiptData = {
         couponNo: coupon.couponNo,
         prize: coupon.prize,
+        metadata: (coupon as any).metadata,
         holderName: state?.user?.name ?? '',
         holderPhone: state?.user?.phone ?? '',
         holderCity: state?.user?.city ?? '',
@@ -646,7 +673,7 @@ export default function ScratchPage() {
             </button>
 
             {/* Terms and Conditions */}
-            <TermsAndConditions prizeType={coupon.prize} />
+            <TermsAndConditions metadata={(coupon as any).metadata} />
 
           </div>
         )}
