@@ -7,7 +7,7 @@ export const registerUserSchema = z.object({
     .string()
     .regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'),
   email: z.string().email('Enter a valid email').optional().or(z.literal('')),
-  city: z.string().max(100).optional(),
+  city: z.string().min(1, 'City is required').max(100),
   campaignId: z.string().uuid('Invalid campaign ID'),
 });
 
@@ -80,10 +80,6 @@ export const batchUpdateCouponSchema = z.object({
     prize: z.string().min(1).optional(),
     status: z.enum(['available', 'assigned', 'redeemed', 'expired']).optional(),
     expiryDate: z.string().datetime().nullable().optional(),
-    userName: z.string().min(2).max(100).optional(),
-    userPhone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone').optional(),
-    userEmail: z.string().email('Invalid email').optional(),
-    userCity: z.string().max(100).optional(),
   }).refine(data => Object.keys(data).length > 0, 'No fields to update')
 });
 

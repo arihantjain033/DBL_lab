@@ -95,3 +95,7 @@ logs/
 test_*.cjs
 scratch_*.ts
 scratch_*.js
+
+# ── Exported Artifacts ───────────────
+*.pdf
+*.csv

@@ -77,6 +77,12 @@ export function ViewCouponModal({ coupon, onClose }: { coupon: any, onClose: () 
   );
 }
 
+const toLocalDatetime = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
 export function EditCouponModal({ coupon, onClose }: { coupon: any, onClose: () => void }) {
   const qc = useQueryClient();
   const [formData, setFormData] = useState({
@@ -96,7 +102,7 @@ export function EditCouponModal({ coupon, onClose }: { coupon: any, onClose: () 
         couponNo: coupon.couponNo || '',
         prize: coupon.prize || '',
         status: coupon.status || 'available',
-        expiryDate: coupon.expiryDate ? new Date(coupon.expiryDate).toISOString().slice(0, 16) : '',
+        expiryDate: toLocalDatetime(coupon.expiryDate),
         userName: coupon.userName || '',
         userPhone: coupon.userPhone || '',
         userEmail: coupon.userEmail || '',
@@ -117,6 +123,17 @@ export function EditCouponModal({ coupon, onClose }: { coupon: any, onClose: () 
 
   if (!coupon) return null;
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload: any = { ...formData };
+    if (payload.expiryDate) {
+      payload.expiryDate = new Date(payload.expiryDate).toISOString();
+    } else {
+      payload.expiryDate = null;
+    }
+    mutation.mutate(payload);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="glass rounded-3xl p-8 w-full max-w-lg shadow-glass animate-scale-in max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -127,7 +144,7 @@ export function EditCouponModal({ coupon, onClose }: { coupon: any, onClose: () 
           <button onClick={onClose} className="text-white/40 hover:text-white transition-colors p-1"><X className="w-5 h-5" /></button>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); mutation.mutate(formData); }} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-primary-400 mb-1">Coupon Number</label>

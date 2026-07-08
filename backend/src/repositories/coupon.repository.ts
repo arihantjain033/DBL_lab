@@ -251,52 +251,67 @@ export const couponRepository = {
     const db = getDb();
     
     return db.transaction(async (tx) => {
-      // Find matching coupons up to the count
-      const matchedCoupons = await tx
-        .select()
+      // 1. Gather stats of ALL coupons for this prize to return as "skipped"
+      const allCoupons = await tx.select({ status: coupons.status })
         .from(coupons)
         .where(
           and(
             eq(coupons.campaignId, campaignId),
             eq(coupons.prize, targetPrize)
           )
+        );
+
+      let skippedAssigned = 0;
+      let skippedRedeemed = 0;
+      let skippedExpired = 0;
+
+      for (const c of allCoupons) {
+        if (c.status === 'assigned') skippedAssigned++;
+        else if (c.status === 'redeemed') skippedRedeemed++;
+        else if (c.status === 'expired') skippedExpired++;
+      }
+
+      // 2. Find ONLY available matching coupons up to the count
+      const matchedCoupons = await tx
+        .select()
+        .from(coupons)
+        .where(
+          and(
+            eq(coupons.campaignId, campaignId),
+            eq(coupons.prize, targetPrize),
+            eq(coupons.status, 'available')
+          )
         )
         .limit(count);
 
-      if (matchedCoupons.length === 0) {
-        return { updated: 0, skipped: count };
-      }
+      const toUpdateIds = matchedCoupons.map(c => c.id);
 
-      const couponUpdateData: any = {};
-      if (data.prize !== undefined) couponUpdateData.prize = data.prize;
-      if (data.status !== undefined) couponUpdateData.status = data.status;
-      if (data.expiryDate !== undefined) {
-        couponUpdateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
-      }
+      if (toUpdateIds.length > 0) {
+        const couponUpdateData: any = {};
+        
+        // Strictly only allow updating specific fields
+        if (data.prize !== undefined) couponUpdateData.prize = data.prize;
+        if (data.status !== undefined) couponUpdateData.status = data.status;
+        if (data.expiryDate !== undefined) {
+          couponUpdateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
+        }
 
-      // Update all matched coupons
-      if (Object.keys(couponUpdateData).length > 0) {
-        const ids = matchedCoupons.map(c => c.id);
-        await tx.update(coupons).set(couponUpdateData).where(inArray(coupons.id, ids));
-      }
-
-      // Find all assigned users to update
-      const assignedUserIds = matchedCoupons.filter(c => c.assignedTo).map(c => c.assignedTo) as string[];
-      if (assignedUserIds.length > 0) {
-        const userUpdateData: any = {};
-        if (data.userName !== undefined) userUpdateData.name = data.userName;
-        if (data.userPhone !== undefined) userUpdateData.phone = data.userPhone;
-        if (data.userEmail !== undefined) userUpdateData.email = data.userEmail;
-        if (data.userCity !== undefined) userUpdateData.city = data.userCity;
-
-        if (Object.keys(userUpdateData).length > 0) {
-          await tx.update(users).set(userUpdateData).where(inArray(users.id, assignedUserIds));
+        if (Object.keys(couponUpdateData).length > 0) {
+          await tx.update(coupons)
+            .set(couponUpdateData)
+            .where(inArray(coupons.id, toUpdateIds));
         }
       }
 
+      // Note: We deliberately DO NOT update users or assignment data here.
+      // Claimed coupons are permanently protected.
+
       return {
-        updated: matchedCoupons.length,
-        skipped: count - matchedCoupons.length,
+        updated: toUpdateIds.length,
+        skippedAssigned,
+        skippedRedeemed,
+        skippedExpired,
+        failed: 0,
       };
     });
   },

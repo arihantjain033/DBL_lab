@@ -62,6 +62,8 @@ export default function LandingPage() {
       return toast.error('Please enter your full name.');
     if (!/^[6-9]\d{9}$/.test(form.phone))
       return toast.error('Please enter a valid 10-digit mobile number.');
+    if (!form.city.trim())
+      return toast.error('Please enter your city.');
 
     registerMutation.mutate({ ...form, campaignId: campaign.id });
   };
@@ -187,7 +189,7 @@ export default function LandingPage() {
               {/* City (optional) */}
               <div>
                 <label className="block text-xs font-medium text-primary-300 mb-1.5 ml-1">
-                  City <span className="text-white/30">(Optional)</span>
+                  City
                 </label>
                 <div className="relative">
                   <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 pointer-events-none" />
