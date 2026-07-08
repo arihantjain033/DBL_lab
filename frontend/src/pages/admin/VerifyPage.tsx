@@ -1,29 +1,69 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { couponApi } from '@/lib/api';
-import { ScanLine, Search, CheckCircle2, AlertCircle, User, Phone, Trophy, Calendar, Hash } from 'lucide-react';
+import { ScanLine, Search, CheckCircle2, AlertCircle, User, Phone, Trophy, Calendar, Hash, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import TermsAndConditions from '@/components/ui/TermsAndConditions';
 import { parseApiError } from '@/lib/error';
+import QRScanner from '@/components/admin/QRScanner';
 
 interface VerifyResult {
   coupon: any;
   user: any;
 }
 
+const playBeep = (type: 'success' | 'error') => {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    if (type === 'success') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.3);
+      osc.stop(ctx.currentTime + 0.3);
+    } else {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.5);
+      osc.stop(ctx.currentTime + 0.5);
+    }
+  } catch(e) {}
+};
+
 export default function VerifyPage() {
   const [couponNo, setCouponNo] = useState('');
   const [result, setResult] = useState<VerifyResult | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto focus input on mount for HID scanners
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const verifyMutation = useMutation({
     mutationFn: (no: string) => couponApi.verify(no.toUpperCase().trim()),
     onSuccess: (res) => {
+      playBeep('success');
       setResult(res.data.data);
+      setCouponNo('');
+      setTimeout(() => inputRef.current?.focus(), 100);
     },
     onError: (e: any) => {
+      playBeep('error');
       setResult(null);
       toast.error(parseApiError(e));
+      setCouponNo('');
+      setTimeout(() => inputRef.current?.focus(), 100);
     },
   });
 
@@ -35,6 +75,23 @@ export default function VerifyPage() {
     },
     onError: (e: any) => toast.error(parseApiError(e)),
   });
+
+  const handleScan = (data: string) => {
+    setShowCamera(false);
+    let extracted = data;
+    try {
+      const parsed = JSON.parse(data);
+      // Support multiple payload structures just in case
+      if (parsed.coupon) extracted = parsed.coupon;
+      else if (parsed.couponNo) extracted = parsed.couponNo;
+    } catch(e) {} // Not JSON, treat as plain string
+    
+    const cleaned = extracted.trim().toUpperCase();
+    if (cleaned) {
+      setCouponNo(cleaned); // Autofill the input field
+      verifyMutation.mutate(cleaned);
+    }
+  };
 
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +134,7 @@ export default function VerifyPage() {
           <div className="relative flex-1">
             <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 pointer-events-none" />
             <input
+              ref={inputRef}
               id="coupon-verify-input"
               type="text"
               value={couponNo}
@@ -87,19 +145,32 @@ export default function VerifyPage() {
               autoComplete="off"
             />
           </div>
-          <button
-            id="btn-verify-coupon"
-            type="submit"
-            disabled={verifyMutation.isPending}
-            className="btn-primary flex-shrink-0 w-full sm:w-auto min-h-[44px] justify-center"
-          >
-            {verifyMutation.isPending ? <LoadingSpinner size="sm" /> : (
-              <>
-                <Search className="w-4 h-4" /> Verify
-              </>
-            )}
-          </button>
+          
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setShowCamera(true)}
+              className="btn-glass flex-shrink-0 min-h-[44px] justify-center px-4"
+              title="Scan QR Code via Camera"
+            >
+              <Camera className="w-5 h-5 text-primary-400" />
+            </button>
+            <button
+              id="btn-verify-coupon"
+              type="submit"
+              disabled={verifyMutation.isPending}
+              className="btn-primary flex-1 sm:flex-none min-h-[44px] justify-center"
+            >
+              {verifyMutation.isPending ? <LoadingSpinner size="sm" /> : (
+                <>
+                  <Search className="w-4 h-4" /> Verify
+                </>
+              )}
+            </button>
+          </div>
         </form>
+
+        {showCamera && <QRScanner onScan={handleScan} onClose={() => setShowCamera(false)} />}
 
         <p className="text-white/30 text-xs mt-3">Format: DBL-XXXXXX (e.g. DBL-000042)</p>
       </div>
