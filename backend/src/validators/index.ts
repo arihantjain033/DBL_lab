@@ -71,6 +71,22 @@ export const updateCouponSchema = z.object({
   userCity: z.string().max(100).optional(),
 });
 
+// ---- Batch Update Coupons ----
+export const batchUpdateCouponSchema = z.object({
+  campaignId: z.string().uuid('Invalid campaign ID'),
+  targetPrize: z.string().min(1, 'Target prize is required'),
+  count: z.number().int().positive('Count must be greater than 0'),
+  updateData: z.object({
+    prize: z.string().min(1).optional(),
+    status: z.enum(['available', 'assigned', 'redeemed', 'expired']).optional(),
+    expiryDate: z.string().datetime().nullable().optional(),
+    userName: z.string().min(2).max(100).optional(),
+    userPhone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone').optional(),
+    userEmail: z.string().email('Invalid email').optional(),
+    userCity: z.string().max(100).optional(),
+  }).refine(data => Object.keys(data).length > 0, 'No fields to update')
+});
+
 // ---- Settings ----
 export const updateSettingSchema = z.object({
   value: z.string(),
@@ -90,3 +106,4 @@ export type UpdateCampaignInput = z.infer<typeof updateCampaignSchema>;
 export type GenerateCouponsInput = z.infer<typeof generateCouponsSchema>;
 export type RedeemCouponInput = z.infer<typeof redeemCouponSchema>;
 export type UpdateCouponInput = z.infer<typeof updateCouponSchema>;
+export type BatchUpdateCouponInput = z.infer<typeof batchUpdateCouponSchema>;

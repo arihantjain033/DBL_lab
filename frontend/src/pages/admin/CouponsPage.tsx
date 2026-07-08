@@ -13,6 +13,7 @@ import { useCouponFilters } from '@/hooks/useCouponFilters';
 import { parseApiError } from '@/lib/error';
 import { useAuthStore } from '@/store/auth.store';
 import { ViewCouponModal, EditCouponModal, DeleteConfirmModal } from '@/components/admin/CouponModals';
+import BatchCouponUpdate from '@/components/admin/BatchCouponUpdate';
 import { Eye, Edit2 } from 'lucide-react';
 
 interface PrizeRow { prize: string; quantity: number }
@@ -164,6 +165,9 @@ export default function CouponsPage() {
           onExport={handleExport}
         />
       )}
+
+      {/* Batch Update */}
+      {canEdit && campaigns.length > 0 && <BatchCouponUpdate rawCoupons={rawCoupons} activeCampaignId={activeCampaignId} />}
 
       {/* Table */}
       {campaigns.length === 0 ? (

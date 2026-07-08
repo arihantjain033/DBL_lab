@@ -161,6 +161,16 @@ export const couponService = {
     logger.info(`Coupon ${id} deleted by admin`);
     return { success: true };
   },
+
+  async batchUpdateCoupons(campaignId: string, targetPrize: string, count: number, updateData: any) {
+    if (count <= 0) {
+      throw new AppError('Count must be greater than 0', 400, 'INVALID_COUNT');
+    }
+
+    const result = await couponRepository.batchUpdate(campaignId, targetPrize, count, updateData);
+    logger.info(`Batch updated ${result.updated} coupons for campaign ${campaignId}`);
+    return result;
+  },
 };
 
 /**

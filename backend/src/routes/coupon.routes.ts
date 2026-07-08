@@ -12,6 +12,7 @@ router.post('/redeem', authenticate, requireRole('superadmin', 'admin', 'recepti
 router.post('/generate', authenticate, requireRole('superadmin', 'admin'), couponController.generate);
 router.get('/campaign/:campaignId/dashboard', authenticate, requireRole('superadmin', 'admin'), couponController.dashboard);
 router.get('/campaign/:campaignId', authenticate, requireRole('superadmin', 'admin'), couponController.list);
+router.put('/batch/update', authenticate, requireRole('superadmin', 'admin'), couponController.batchUpdate);
 router.put('/:id', authenticate, requireRole('superadmin', 'admin'), couponController.update);
 router.delete('/:id', authenticate, requireRole('superadmin', 'admin'), couponController.delete);
 

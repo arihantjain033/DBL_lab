@@ -1,4 +1,4 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import { getDb, schema } from '../db/index.js';
 
 const { coupons, claims, users } = schema;
@@ -244,6 +244,60 @@ export const couponRepository = {
       }
 
       return this.findById(id);
+    });
+  },
+
+  async batchUpdate(campaignId: string, targetPrize: string, count: number, data: any) {
+    const db = getDb();
+    
+    return db.transaction(async (tx) => {
+      // Find matching coupons up to the count
+      const matchedCoupons = await tx
+        .select()
+        .from(coupons)
+        .where(
+          and(
+            eq(coupons.campaignId, campaignId),
+            eq(coupons.prize, targetPrize)
+          )
+        )
+        .limit(count);
+
+      if (matchedCoupons.length === 0) {
+        return { updated: 0, skipped: count };
+      }
+
+      const couponUpdateData: any = {};
+      if (data.prize !== undefined) couponUpdateData.prize = data.prize;
+      if (data.status !== undefined) couponUpdateData.status = data.status;
+      if (data.expiryDate !== undefined) {
+        couponUpdateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
+      }
+
+      // Update all matched coupons
+      if (Object.keys(couponUpdateData).length > 0) {
+        const ids = matchedCoupons.map(c => c.id);
+        await tx.update(coupons).set(couponUpdateData).where(inArray(coupons.id, ids));
+      }
+
+      // Find all assigned users to update
+      const assignedUserIds = matchedCoupons.filter(c => c.assignedTo).map(c => c.assignedTo) as string[];
+      if (assignedUserIds.length > 0) {
+        const userUpdateData: any = {};
+        if (data.userName !== undefined) userUpdateData.name = data.userName;
+        if (data.userPhone !== undefined) userUpdateData.phone = data.userPhone;
+        if (data.userEmail !== undefined) userUpdateData.email = data.userEmail;
+        if (data.userCity !== undefined) userUpdateData.city = data.userCity;
+
+        if (Object.keys(userUpdateData).length > 0) {
+          await tx.update(users).set(userUpdateData).where(inArray(users.id, assignedUserIds));
+        }
+      }
+
+      return {
+        updated: matchedCoupons.length,
+        skipped: count - matchedCoupons.length,
+      };
     });
   },
 };

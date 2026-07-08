@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { generateCouponsSchema, redeemCouponSchema, paginationSchema, updateCouponSchema } from '../validators/index.js';
+import { generateCouponsSchema, redeemCouponSchema, paginationSchema, updateCouponSchema, batchUpdateCouponSchema } from '../validators/index.js';
 import { couponService } from '../services/coupon.service.js';
 import { couponRepository } from '../repositories/coupon.repository.js';
 
@@ -84,6 +84,16 @@ export const couponController = {
     try {
       const { id } = req.params;
       const result = await couponService.deleteCoupon(id);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async batchUpdate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { campaignId, targetPrize, count, updateData } = batchUpdateCouponSchema.parse(req.body);
+      const result = await couponService.batchUpdateCoupons(campaignId, targetPrize, count, updateData);
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);

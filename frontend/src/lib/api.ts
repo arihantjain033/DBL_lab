@@ -58,6 +58,7 @@ export const couponApi = {
   list: (campaignId: string, params?: object) =>
     api.get(`/coupons/campaign/${campaignId}`, { params }),
   update: (id: string, data: object) => api.put(`/coupons/${id}`, data),
+  batchUpdate: (data: object) => api.put('/coupons/batch/update', data),
   delete: (id: string) => api.delete(`/coupons/${id}`),
 };
 
