@@ -3,10 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { campaignApi } from '@/lib/api';
 import {
   Users, User, Phone, MapPin, Trophy,
-  CheckCircle,
+  CheckCircle, FileText
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Pagination from '@/components/admin/Pagination';
+import ReceiptViewerModal from '@/components/admin/ReceiptViewerModal';
 
 const STATUS_STYLES: Record<string, { label: string; cls: string; dot: string }> = {
   available: { label: 'Not Scratched', cls: 'text-white/40 bg-white/5',      dot: 'bg-white/20' },
@@ -28,6 +29,7 @@ export default function ParticipantsPage() {
   const [selectedCampaign, setSelectedCampaign] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(() => Number(localStorage.getItem('adminPageSize')) || 50);
+  const [selectedReceiptParticipant, setSelectedReceiptParticipant] = useState<any>(null);
 
   const handleLimitChange = (newLimit: number) => {
     setLimit(newLimit);
@@ -109,6 +111,7 @@ export default function ParticipantsPage() {
                   <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs">Coupon</th>
                   <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs">Prize Won</th>
                   <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs">Status</th>
+                  <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs">Receipt</th>
                   <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs hidden xl:table-cell">Valid Until</th>
                   <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs hidden xl:table-cell">Registered</th>
                 </tr>
@@ -185,6 +188,20 @@ export default function ParticipantsPage() {
                           {st.label}
                         </span>
                       </td>
+                      {/* Receipt */}
+                      <td className="px-5 py-3">
+                        {p.couponNo ? (
+                          <button
+                            onClick={() => setSelectedReceiptParticipant(p)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            View Receipt
+                          </button>
+                        ) : (
+                          <span className="text-white/20 text-xs italic">No Receipt</span>
+                        )}
+                      </td>
                       {/* Valid Until */}
                       <td className="px-5 py-3 text-white/40 text-xs hidden xl:table-cell whitespace-nowrap">
                         {fmtDate(p.expiryDate)}
@@ -207,6 +224,13 @@ export default function ParticipantsPage() {
             limit={limit}
             onPageChange={setPage}
             onLimitChange={handleLimitChange}
+          />
+
+          <ReceiptViewerModal
+            isOpen={!!selectedReceiptParticipant}
+            onClose={() => setSelectedReceiptParticipant(null)}
+            participant={selectedReceiptParticipant}
+            campaignName={campaigns.find(c => c.id === activeCampaignId)?.name || ''}
           />
         </>
       )}

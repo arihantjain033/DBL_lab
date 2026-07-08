@@ -96,6 +96,7 @@ export const userRepository = {
         assignedAt:  coupons.assignedAt,
         redeemedAt:  coupons.redeemedAt,
         expiryDate:  coupons.expiryDate,
+        metadata:    coupons.metadata,
       })
       .from(users)
       .leftJoin(coupons, eq(coupons.assignedTo, users.id))

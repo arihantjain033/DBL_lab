@@ -7,6 +7,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import TermsAndConditions from '@/components/ui/TermsAndConditions';
 import { parseApiError } from '@/lib/error';
 import QRScanner from '@/components/admin/QRScanner';
+import { extractCouponNo } from '@/lib/qrParser';
 
 interface VerifyResult {
   coupon: any;
@@ -78,25 +79,24 @@ export default function VerifyPage() {
 
   const handleScan = (data: string) => {
     setShowCamera(false);
-    let extracted = data;
-    try {
-      const parsed = JSON.parse(data);
-      // Support multiple payload structures just in case
-      if (parsed.coupon) extracted = parsed.coupon;
-      else if (parsed.couponNo) extracted = parsed.couponNo;
-    } catch(e) {} // Not JSON, treat as plain string
-    
-    const cleaned = extracted.trim().toUpperCase();
+    const cleaned = extractCouponNo(data);
     if (cleaned) {
-      setCouponNo(cleaned); // Autofill the input field
+      setCouponNo(cleaned);
       verifyMutation.mutate(cleaned);
+    } else {
+      toast.error('Unrecognized QR format');
     }
   };
 
   const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleaned = couponNo.trim().toUpperCase();
+    const cleaned = extractCouponNo(couponNo);
     if (!cleaned) return toast.error('Enter a coupon number');
+    
+    if (cleaned !== couponNo) {
+      setCouponNo(cleaned);
+    }
+    
     verifyMutation.mutate(cleaned);
   };
 
