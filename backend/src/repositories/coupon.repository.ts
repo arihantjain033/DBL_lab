@@ -194,6 +194,58 @@ export const couponRepository = {
       .groupBy(coupons.prize)
       .orderBy(sql`count(*) DESC`);
   },
+
+  async delete(id: string) {
+    const db = getDb();
+    const [deleted] = await db
+      .delete(coupons)
+      .where(eq(coupons.id, id))
+      .returning();
+    return deleted ?? null;
+  },
+
+  async update(id: string, data: any) {
+    const db = getDb();
+    
+    return db.transaction(async (tx) => {
+      // Find the coupon first to get assignedTo
+      const [coupon] = await tx
+        .select()
+        .from(coupons)
+        .where(eq(coupons.id, id))
+        .limit(1);
+        
+      if (!coupon) return null;
+
+      // Update coupon fields
+      const couponUpdateData: any = {};
+      if (data.couponNo !== undefined) couponUpdateData.couponNo = data.couponNo;
+      if (data.prize !== undefined) couponUpdateData.prize = data.prize;
+      if (data.status !== undefined) couponUpdateData.status = data.status;
+      if (data.expiryDate !== undefined) {
+        couponUpdateData.expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
+      }
+      
+      if (Object.keys(couponUpdateData).length > 0) {
+        await tx.update(coupons).set(couponUpdateData).where(eq(coupons.id, id));
+      }
+
+      // If there's an assigned user, update user fields
+      if (coupon.assignedTo) {
+        const userUpdateData: any = {};
+        if (data.userName !== undefined) userUpdateData.name = data.userName;
+        if (data.userPhone !== undefined) userUpdateData.phone = data.userPhone;
+        if (data.userEmail !== undefined) userUpdateData.email = data.userEmail;
+        if (data.userCity !== undefined) userUpdateData.city = data.userCity;
+
+        if (Object.keys(userUpdateData).length > 0) {
+          await tx.update(users).set(userUpdateData).where(eq(users.id, coupon.assignedTo));
+        }
+      }
+
+      return this.findById(id);
+    });
+  },
 };
 
 export const claimRepository = {

@@ -132,6 +132,35 @@ export const couponService = {
       prizeBreakdown,
     };
   },
+
+  async updateCoupon(id: string, data: any) {
+    const coupon = await couponRepository.findById(id);
+    if (!coupon) {
+      throw new AppError('Coupon not found', 404, 'COUPON_NOT_FOUND');
+    }
+
+    if (data.couponNo && data.couponNo !== coupon.couponNo) {
+      const existing = await couponRepository.findByCouponNo(data.couponNo);
+      if (existing) {
+        throw new AppError('Coupon number already exists', 409, 'COUPON_NO_EXISTS');
+      }
+    }
+
+    const updated = await couponRepository.update(id, data);
+    logger.info(`Coupon ${id} updated by admin`);
+    return updated;
+  },
+
+  async deleteCoupon(id: string) {
+    const coupon = await couponRepository.findById(id);
+    if (!coupon) {
+      throw new AppError('Coupon not found', 404, 'COUPON_NOT_FOUND');
+    }
+
+    await couponRepository.delete(id);
+    logger.info(`Coupon ${id} deleted by admin`);
+    return { success: true };
+  },
 };
 
 /**

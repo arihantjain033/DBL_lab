@@ -90,3 +90,8 @@ logs/
 *.orig
 .vercel
 .netlify
+
+# ── Scratch / Temp Scripts ───────────
+test_*.cjs
+scratch_*.ts
+scratch_*.js

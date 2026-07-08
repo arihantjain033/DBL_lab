@@ -11,6 +11,9 @@ import Pagination from '@/components/admin/Pagination';
 import CouponFilterBar from '@/components/admin/CouponFilterBar';
 import { useCouponFilters } from '@/hooks/useCouponFilters';
 import { parseApiError } from '@/lib/error';
+import { useAuthStore } from '@/store/auth.store';
+import { ViewCouponModal, EditCouponModal, DeleteConfirmModal } from '@/components/admin/CouponModals';
+import { Eye, Edit2 } from 'lucide-react';
 
 interface PrizeRow { prize: string; quantity: number }
 
@@ -26,9 +29,16 @@ const fmtDate = (d?: string | null) =>
 
 export default function CouponsPage() {
   const qc = useQueryClient();
+  const admin = useAuthStore((s) => s.admin);
+  const canEdit = admin?.role === 'superadmin' || admin?.role === 'admin';
+
   const [showGenerator, setShowGenerator] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(() => Number(localStorage.getItem('adminPageSize')) || 50);
+
+  const [viewCoupon, setViewCoupon] = useState<any>(null);
+  const [editCoupon, setEditCoupon] = useState<any>(null);
+  const [deleteCoupon, setDeleteCoupon] = useState<any>(null);
 
   const handleLimitChange = (newLimit: number) => {
     setLimit(newLimit);
@@ -176,6 +186,7 @@ export default function CouponsPage() {
                   <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs">Mobile</th>
                   <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs hidden lg:table-cell">City</th>
                   <th className="text-left px-5 py-3.5 text-white/40 font-medium text-xs hidden lg:table-cell">Valid Until</th>
+                  <th className="text-right px-5 py-3.5 text-white/40 font-medium text-xs">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -247,6 +258,24 @@ export default function CouponsPage() {
                         {/* Expiry */}
                         <td className="px-5 py-3 text-white/40 text-xs hidden lg:table-cell whitespace-nowrap">
                           {fmtDate(c.expiryDate)}
+                        </td>
+                        {/* Actions */}
+                        <td className="px-5 py-3 text-right whitespace-nowrap">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => setViewCoupon(c)} className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="View">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {canEdit && (
+                              <>
+                                <button onClick={() => setEditCoupon(c)} className="p-1.5 text-white/40 hover:text-primary-400 hover:bg-primary-500/10 rounded-lg transition-colors" title="Edit">
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => setDeleteCoupon(c)} className="p-1.5 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Delete">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -362,6 +391,10 @@ export default function CouponsPage() {
           </div>
         </div>
       )}
+
+      {viewCoupon && <ViewCouponModal coupon={viewCoupon} onClose={() => setViewCoupon(null)} />}
+      {editCoupon && <EditCouponModal coupon={editCoupon} onClose={() => setEditCoupon(null)} />}
+      {deleteCoupon && <DeleteConfirmModal coupon={deleteCoupon} onClose={() => setDeleteCoupon(null)} />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { generateCouponsSchema, redeemCouponSchema, paginationSchema } from '../validators/index.js';
+import { generateCouponsSchema, redeemCouponSchema, paginationSchema, updateCouponSchema } from '../validators/index.js';
 import { couponService } from '../services/coupon.service.js';
 import { couponRepository } from '../repositories/coupon.repository.js';
 
@@ -64,6 +64,27 @@ export const couponController = {
           totalPages: Math.ceil(total / limit) 
         } 
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const data = updateCouponSchema.parse(req.body);
+      const result = await couponService.updateCoupon(id, data);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const result = await couponService.deleteCoupon(id);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

@@ -57,6 +57,20 @@ export const redeemCouponSchema = z.object({
     .regex(/^DBL-\d{4}$/, 'Invalid coupon number format. Expected: DBL-XXXX'),
 });
 
+// ---- Update Coupon ----
+export const updateCouponSchema = z.object({
+  couponNo: z.string().min(1, 'Coupon number is required').optional(),
+  prize: z.string().min(1, 'Prize is required').optional(),
+  status: z.enum(['available', 'assigned', 'redeemed', 'expired']).optional(),
+  expiryDate: z.string().datetime().nullable().optional(),
+  
+  // User details (if assigned)
+  userName: z.string().min(2).max(100).optional(),
+  userPhone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number').optional(),
+  userEmail: z.string().email('Enter a valid email').or(z.literal('')).optional(),
+  userCity: z.string().max(100).optional(),
+});
+
 // ---- Settings ----
 export const updateSettingSchema = z.object({
   value: z.string(),
@@ -75,3 +89,4 @@ export type CreateCampaignInput = z.infer<typeof createCampaignSchema>;
 export type UpdateCampaignInput = z.infer<typeof updateCampaignSchema>;
 export type GenerateCouponsInput = z.infer<typeof generateCouponsSchema>;
 export type RedeemCouponInput = z.infer<typeof redeemCouponSchema>;
+export type UpdateCouponInput = z.infer<typeof updateCouponSchema>;

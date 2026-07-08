@@ -57,6 +57,8 @@ export const couponApi = {
   dashboard: (campaignId: string) => api.get(`/coupons/campaign/${campaignId}/dashboard`),
   list: (campaignId: string, params?: object) =>
     api.get(`/coupons/campaign/${campaignId}`, { params }),
+  update: (id: string, data: object) => api.put(`/coupons/${id}`, data),
+  delete: (id: string) => api.delete(`/coupons/${id}`),
 };
 
 export const authApi = {
