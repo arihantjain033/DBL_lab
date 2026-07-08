@@ -90,9 +90,36 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   cy += 8;  // (was 10)
   const meta = receipt.metadata || {};
   const showMinimumBilling = meta.showMinimumBilling === true;
-  const minimumBillingText = `Discount applicable only on a minimum billing of ₹${meta.minimumBilling || 0}.`;
 
-  const prizeBoxH = showMinimumBilling ? 28 : 20;  // tighter (was 32/22)
+  // 1. Prepare plainPrize
+  const tmpPrize = document.createElement('div');
+  tmpPrize.innerHTML = String(receipt.prize);
+  const plainPrize = tmpPrize.textContent || tmpPrize.innerText || '';
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  const prizeLines = doc.splitTextToSize(plainPrize, W - 50);
+  const prizeLinesHeight = prizeLines.length * 6; // approx 6mm per line
+
+  // 2. Prepare minimumBillingText (Using Rs. instead of ₹ to prevent jsPDF UTF-16 encoding bug which causes spacing/¹200 issues)
+  let minBillingLines: string[] = [];
+  let minBillingHeight = 0;
+  if (showMinimumBilling) {
+    const minimumBillingText = `Discount applicable only on a minimum billing of Rs. ${meta.minimumBilling || 0}.`;
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'normal');
+    minBillingLines = doc.splitTextToSize(minimumBillingText, W - 50);
+    minBillingHeight = minBillingLines.length * 4.5; 
+  }
+
+  // 3. Dynamic Box Height
+  const paddingY = 6;
+  const innerSpacing = 3;
+  let contentHeight = prizeLinesHeight;
+  if (showMinimumBilling) {
+    contentHeight += innerSpacing + minBillingHeight;
+  }
+  const prizeBoxH = Math.max(contentHeight + (paddingY * 2), showMinimumBilling ? 28 : 20);
 
   cy = ensureSpace(cy, prizeBoxH + 4);
   doc.setFillColor(254, 243, 199);
@@ -100,18 +127,29 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   doc.setLineWidth(0.5);
   doc.roundedRect(MARGIN, cy, W - MARGIN * 2, prizeBoxH, 3, 3, 'FD');
 
+  // 4. Render Prize Title Centered
   doc.setTextColor(146, 64, 14);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(receipt.prize, W / 2, cy + 12, { align: 'center', maxWidth: W - 50 });
+  let currentTextY = cy + paddingY + 4;
+  prizeLines.forEach((line: string) => {
+    doc.text(line, W / 2, currentTextY, { align: 'center' });
+    currentTextY += 6;
+  });
 
+  // 5. Render Minimum Billing Centered
   if (showMinimumBilling) {
+    currentTextY += innerSpacing - 2;
     doc.setFontSize(9.5);
     doc.setTextColor(180, 83, 9);
-    doc.text(minimumBillingText, W / 2, cy + 22, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    minBillingLines.forEach((line: string) => {
+      doc.text(line, W / 2, currentTextY, { align: 'center' });
+      currentTextY += 4.5;
+    });
   }
 
-  cy += prizeBoxH + 5;  // (was +8)
+  cy += prizeBoxH + 5;
 
   // ----------------------------------------
   // 3. Coupon Number
@@ -189,7 +227,8 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   const highlightedRules: string[] = [];
 
   if (showMinimumBilling) {
-    highlightedRules.push(minimumBillingText.toLowerCase());
+    const filterText = `Discount applicable only on a minimum billing of ₹${meta.minimumBilling || 0}.`;
+    highlightedRules.push(filterText.toLowerCase());
   }
 
   if (meta.nextVisitOnly) {
@@ -199,7 +238,11 @@ function generatePDF(receipt: ReceiptData, qrDataUrl: string) {
   }
 
   if (meta.terms) {
-    const lines = String(meta.terms).replace(/\\n/g, '\n').split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = String(meta.terms);
+    const plainText = tmp.textContent || tmp.innerText || '';
+    
+    const lines = plainText.replace(/\\n/g, '\n').split('\n').map(l => l.trim()).filter(l => l.length > 0);
     lines.forEach(line => {
       if (!highlightedRules.includes(line.toLowerCase())) {
         terms.push(line);
