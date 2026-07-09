@@ -15,6 +15,8 @@ export default function ReceiptViewerModal({ isOpen, onClose, participant, campa
   const [pdfDataUri, setPdfDataUri] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+  
+  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   useEffect(() => {
     if (isOpen) {
@@ -80,7 +82,6 @@ export default function ReceiptViewerModal({ isOpen, onClose, participant, campa
           expiryDate: dateFmt(participant.expiryDate),
           campaignName: campaignName,
           labName: 'DBL Pathology Lab',
-          verifyUrl: `${window.location.origin}/verify/${participant.couponNo}`,
         };
 
         const uri = generatePDF(receiptData, qrDataUrl, 'bloburl') as any;
@@ -175,11 +176,31 @@ export default function ReceiptViewerModal({ isOpen, onClose, participant, campa
               <p className="text-white/70">Generating secure preview...</p>
             </div>
           ) : pdfDataUri ? (
-            <iframe
-              src={`${pdfDataUri}#view=FitH`}
-              className="w-full h-full border-0 rounded-b-2xl"
-              title="Receipt Preview"
-            />
+            isMobileDevice ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                <FileText className="w-16 h-16 text-primary-500/50 mb-8" />
+                <div className="flex flex-col gap-3 w-full max-w-xs">
+                  <button
+                    onClick={() => window.open(pdfDataUri, '_blank')}
+                    className="w-full py-3.5 bg-primary-500 hover:bg-primary-400 text-black font-semibold rounded-xl transition-colors"
+                  >
+                    Open PDF 
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    Download File
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <iframe
+                src={`${pdfDataUri}#view=FitH`}
+                className="w-full h-full border-0 rounded-b-2xl"
+                title="Receipt Preview"
+              />
+            )
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <p className="text-red-400">Failed to load preview</p>
@@ -198,7 +219,6 @@ export default function ReceiptViewerModal({ isOpen, onClose, participant, campa
                 holder: participant.userName,
                 phone: participant.userPhone,
                 validUntil: participant.expiryDate ? new Date(participant.expiryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : 'No Expiry',
-                verify: `${window.location.origin}/verify/${participant.couponNo}`,
               })}
               size={200}
               level="M"

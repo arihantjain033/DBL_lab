@@ -11,7 +11,6 @@ export interface ReceiptData {
   expiryDate: string;
   campaignName: string;
   labName: string;
-  verifyUrl: string;
 }
 
 export function generatePDF(receipt: ReceiptData, qrDataUrl: string, action: 'save' | 'bloburl' = 'save') {

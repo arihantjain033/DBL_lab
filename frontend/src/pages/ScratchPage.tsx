@@ -158,7 +158,6 @@ export default function ScratchPage() {
           : 'No Expiry',
         campaignName: state?.campaign?.name ?? 'DBL Pathology Lab',
         labName: 'DBL Pathology Lab',
-        verifyUrl: window.location.origin,
       };
 
       generatePDF(receipt, qrDataUrl);
@@ -190,7 +189,6 @@ export default function ScratchPage() {
       holder: state?.user?.name,
       phone: state?.user?.phone,
       validUntil: coupon.expiryDate ? fmtDate(coupon.expiryDate) : 'No Expiry',
-      verify: `${window.location.origin}/verify/${coupon.couponNo}`,
     })
     : '';
 
